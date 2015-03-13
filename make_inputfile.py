@@ -1,12 +1,15 @@
+#!/usr/bin/env python
+
 import random
+import sys
 
 N = 10
 duration = 80
 
 dt = 0.01
 
-target_file = open("target4.txt", 'w')
-input_file = open("input4.txt", 'w')
+target_file = open(sys.argv[1], 'w')
+input_file = open(sys.argv[2], 'w')
 
 input_file.write( "%d\n"%N )
 input_file.write( "%d\n"%duration )
