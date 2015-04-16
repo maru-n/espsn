@@ -16,7 +16,7 @@ import sys
 
 
 def convert_cwnd_matrix(raw_data):
-    N = int(np.max(raw_data[:, 1]))+1
+    N = int(np.max(raw_data[:, 1])) + 1
     cwnd = [[np.empty((0, 2)) for i in range(N)] for j in range(N)]
     for d in raw_data:
         src = int(d[1])
@@ -36,7 +36,7 @@ def convert_cwnd_matrix(raw_data):
 def get_output(input_file, target_file):
     dt = 0.01
     init_time = 1.0
-    training_time = 20.0
+    training_time = 50.0
     test_time = 80.0
     #training_time = 50.0
     #test_time = 120.0
@@ -44,11 +44,11 @@ def get_output(input_file, target_file):
     #(time, src, dst, cwnd)
     data = np.loadtxt(input_file, usecols=(1, 3, 7, 17))
 
-    N = int(np.max(data[:, 1]))+1
-    T = int((training_time-init_time)/dt)
-    Tall = int(test_time/dt)
+    N = int(np.max(data[:, 1])) + 1
+    T = int((training_time - init_time) / dt)
+    Tall = int(test_time / dt)
 
-    cwnd_timeseries = np.zeros((N*N-N, Tall))
+    cwnd_timeseries = np.zeros((N * N - N, Tall))
 
     for d in data:
         src = int(d[1])
@@ -63,8 +63,8 @@ def get_output(input_file, target_file):
         else:
             idx = idx - src
 
-        #print src, dst, idx
-        time_idx = int(time/dt)
+        # print src, dst, idx
+        time_idx = int(time / dt)
 
         if 0 <= time_idx:
             cwnd_timeseries[idx, time_idx:] = cwnd
@@ -75,25 +75,24 @@ def get_output(input_file, target_file):
     input_data2 = np.zeros((1, Tall))
 
     for i in range(len(target_data_raw)):
-        target_data[0, i] = target_data_raw[i,0]
-        input_data1[0, i] = target_data_raw[i,1]/4. - 0.5
-        input_data2[0, i] = target_data_raw[i,2]/4. - 0.9
+        target_data[0, i] = target_data_raw[i, 0]
+        input_data1[0, i] = target_data_raw[i, 1] / 4. - 0.5
+        input_data2[0, i] = target_data_raw[i, 2] / 4. - 0.9
 
     # train the output
     ############
-    #reg = 1e-8  # regularization coefficient
+    # reg = 1e-8  # regularization coefficient
     ############
     reg = 1e-6  # regularization coefficient
-    X = cwnd_timeseries[:, int(init_time/dt): int(training_time/dt)]
+    X = cwnd_timeseries[:, int(init_time / dt): int(training_time / dt)]
     X_T = X.T
-    Yt = target_data[:, int(init_time/dt): int(training_time/dt)]
-    Wout = dot(dot(Yt, X_T), linalg.inv(dot(X, X_T) + reg*eye(X.shape[0])))
+    Yt = target_data[:, int(init_time / dt): int(training_time / dt)]
+    Wout = dot(dot(Yt, X_T), linalg.inv(dot(X, X_T) + reg * eye(X.shape[0])))
     #Wout = dot( dot(Yt,X_T), linalg.inv( dot(X,X_T)))
 
     # compute MSE for the first errorLen time steps
-    #mse = sum( square( data[trainLen+1:trainLen+errorLen+1] - Y[0,0:errorLen] ) ) / errorLen
-    #print 'MSE = ' + str( mse )
-
+    #mse = sum(square(data[trainLen+1:trainLen+errorLen+1] - Y[0,0:errorLen])) / errorLen
+    # print 'MSE = ' + str( mse )
 
     Y = dot(Wout, cwnd_timeseries)
     R = target_data
@@ -103,14 +102,16 @@ def get_output(input_file, target_file):
     plt.title('Output weights $\mathbf{W}^{out}$')
 
     plt.figure(1).clear()
-    plt.plot(dt*np.arange(R.shape[1]), R.T, 'r', linewidth=2)
-    plt.plot(dt*np.arange(input_data1.shape[1]), input_data1.T, 'g', linewidth=2)
-    plt.plot(dt*np.arange(input_data2.shape[1]), input_data2.T, 'g', linewidth=2)
+    plt.plot(dt * np.arange(R.shape[1]), R.T, 'r', linewidth=2)
+    plt.plot(dt * np.arange(input_data1.shape[1]),
+             input_data1.T, 'g', linewidth=2)
+    plt.plot(dt * np.arange(input_data2.shape[1]),
+             input_data2.T, 'g', linewidth=2)
     plt.axvline(x=init_time, color='red')
     plt.axvline(x=training_time, color='red')
-    plt.plot(dt*np.arange(Y.shape[1]), Y.T, 'b')
+    plt.plot(dt * np.arange(Y.shape[1]), Y.T, 'b')
 
-    # # check plot
+    # check plot
     # plt.figure(10).clear()
     # plt.plot(range(target_data.shape[1]), target_data.T)
     # plt.ylim(0,1.5)
@@ -121,7 +122,7 @@ def get_output(input_file, target_file):
     # cwnd_raw = convert_cwnd_matrix(data)
     # target = cwnd_raw[src][dst]
     # plt.plot(target[:,0], target[:,1], '.')
-    # #plt.plot(target[:,0], target[:,1], drawstyle='steps-post')
+    # plt.plot(target[:,0], target[:,1], drawstyle='steps-post')
     # plt.ylim(1,40)
 
     plt.show()
