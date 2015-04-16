@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import frange
 #from scipy import linalg
 import sys
-import pdb
+
 
 def convert_cwnd_matrix(raw_data):
     N = int(np.max(raw_data[:, 1]))+1
@@ -34,18 +34,10 @@ def convert_cwnd_matrix(raw_data):
 #
 
 def get_output(input_file, target_file):
-    #######
     dt = 0.01
-    #######
-
     init_time = 1.0
-
-    #######
     training_time = 20.0
-    test_time = 80.0
-    #######
-    #training_time = 50.0
-    #test_time = 120.0
+    test_time = 40.0
 
     #(time, src, dst, cwnd)
     data = np.loadtxt(input_file, usecols=(1, 3, 7, 17))
@@ -75,21 +67,21 @@ def get_output(input_file, target_file):
         if 0 <= time_idx:
             cwnd_timeseries[idx, time_idx:] = cwnd
 
-    target_data_raw = np.loadtxt(target_file)
+    #target_data = np.loadtxt(target_file, delimiter=',')
     target_data = np.zeros((1, Tall))
-    input_data1 = np.zeros((1, Tall))
-    input_data2 = np.zeros((1, Tall))
-
-    for i in range(len(target_data_raw)):
-        target_data[0, i] = target_data_raw[i,0]
-        input_data1[0, i] = target_data_raw[i,1]/4. - 0.5
-        input_data2[0, i] = target_data_raw[i,2]/4. - 0.9
+    for i in range(0, int(test_time), 4):
+        t0 = int(i/dt)
+        t1 = int((i+1)/dt)
+        t2 = int((i+2)/dt)
+        t3 = int((i+3)/dt)
+        t4 = int((i+4)/dt)
+        target_data[0, t0:t1] = 0.0
+        target_data[0, t1:t2] = 1.0
+        target_data[0, t2:t3] = 1.0
+        target_data[0, t3:t4] = 0.0
 
     # train the output
-    ############
-    #reg = 1e-8  # regularization coefficient
-    ############
-    reg = 1e-6  # regularization coefficient
+    reg = 1e-8  # regularization coefficient
     X = cwnd_timeseries[:, int(init_time/dt): int(training_time/dt)]
     X_T = X.T
     Yt = target_data[:, int(init_time/dt): int(training_time/dt)]
@@ -104,12 +96,10 @@ def get_output(input_file, target_file):
     plt.title('Output weights $\mathbf{W}^{out}$')
 
     plt.figure(1).clear()
-    plt.plot(dt*np.arange(R.shape[1]), R.T, 'r', linewidth=2)
-    plt.plot(dt*np.arange(input_data1.shape[1]), input_data1.T, 'g', linewidth=2)
-    plt.plot(dt*np.arange(input_data2.shape[1]), input_data2.T, 'g', linewidth=2)
+    plt.plot(dt*np.arange(Y.shape[1]), Y.T)
+    plt.plot(dt*np.arange(R.shape[1]), R.T)
     plt.axvline(x=init_time, color='red')
     plt.axvline(x=training_time, color='red')
-    plt.plot(dt*np.arange(Y.shape[1]), Y.T, 'b')
 
     # # check plot
     # plt.figure(10).clear()
