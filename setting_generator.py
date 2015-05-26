@@ -3,6 +3,8 @@
 import random
 import sys
 
+
+#def generate_settings(N=10, duration=400, esn_unit_time=0.01):
 N = 10
 duration = 400
 
@@ -41,3 +43,4 @@ for sec in range(0, duration, one_signal_duration):
             target_file.write("0 %d %d\n" % (in1, in2))
         else:
             target_file.write("1 %d %d\n" % (in1, in2))
+
