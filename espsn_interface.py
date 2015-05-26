@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import frange
 #from scipy import linalg
 import sys
+import pdb
 
 
 def convert_cwnd_matrix(raw_data):
@@ -35,9 +36,9 @@ def convert_cwnd_matrix(raw_data):
 
 def get_output(input_file, target_file):
     dt = 0.01
-    init_time = 1.0
-    training_time = 50.0
-    test_time = 80.0
+    init_time = 4.0
+    training_time = 200.0
+    test_time = 400.0
     #training_time = 50.0
     #test_time = 120.0
 
@@ -103,13 +104,20 @@ def get_output(input_file, target_file):
 
     plt.figure(1).clear()
     plt.plot(dt * np.arange(R.shape[1]), R.T, 'r', linewidth=2)
+
     plt.plot(dt * np.arange(input_data1.shape[1]),
              input_data1.T, 'g', linewidth=2)
     plt.plot(dt * np.arange(input_data2.shape[1]),
              input_data2.T, 'g', linewidth=2)
     plt.axvline(x=init_time, color='red')
     plt.axvline(x=training_time, color='red')
-    plt.plot(dt * np.arange(Y.shape[1]), Y.T, 'b')
+    plt.plot(dt * np.arange(Y.shape[1]), Y.T, 'c')
+
+    #combolution
+    filter = np.ones(100)/100.0
+    C = np.convolve(Y[0,:], filter,'valid')
+    plt.plot(dt * np.arange(C.shape[0]), C, 'b', linewidth=2)
+
 
     # check plot
     # plt.figure(10).clear()
@@ -129,4 +137,5 @@ def get_output(input_file, target_file):
 
 
 if __name__ == '__main__':
+    #experiment_dir_name = sys.argv[1]
     get_output(sys.argv[1], sys.argv[2])
