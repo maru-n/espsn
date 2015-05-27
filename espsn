@@ -1,0 +1,17 @@
+#! /bin/bash
+
+WORK_DIR=`dirname $0`
+NS2_SCRIPT=espsn.tcl
+ESPSN_SCRIPT=espsn_interface.py
+SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
+OUTPUT_FILENAME=out
+OUTPUT_DIR=`dirname $SETTING_FILE`
+
+cd $WORK_DIR
+
+NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}"
+eval $NS2_CMD
+
+ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}.tcp ${OUTPUT_DIR}"
+eval $ESPSN_CMD
+
