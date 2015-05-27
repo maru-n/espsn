@@ -73,24 +73,40 @@ from optparse import OptionParser
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("-o", dest="output_filename", type="string",
-                      help="write output to FILE", metavar="FILE")
-    parser.add_option("-r", dest="random_seed", type='int', default=None,
+    parser.add_option("-o",
+                      dest="output_filename",
+                      type="string",
+                      default="settings.txt",
+                      help="write output to FILE",
+                      metavar="FILE")
+    parser.add_option("-r",
+                      dest="random_seed",
+                      type='int',
+                      default=None,
                       help="random seed value", metavar="SEED")
-    parser.add_option("-t", "--type", dest="type", type="choice",
-                      choices=["xor", "parity"], default="xor",
+    parser.add_option("-t",
+                      "--type",
+                      dest="type",
+                      choices=["xor", "parity"],
+                      type="choice",
+                      default="xor",
                       help="time series type")
+    parser.add_option("-N",
+                      dest="N",
+                      type="int",
+                      default=10,
+                      help="node num")
 
     (options, args) = parser.parse_args()
 
     np.random.seed(options.random_seed)
 
     settings = generate_settings(options.type,
-                                 N=10,
-                                 duration=200,
+                                 N=options.N,
+                                 duration=400,
                                  one_signal_duration=4,
                                  esn_init_time=4,
-                                 esn_training_time=100,
+                                 esn_training_time=200,
                                  esn_dt=0.1)
 
     if options.output_filename:
