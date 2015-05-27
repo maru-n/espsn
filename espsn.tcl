@@ -58,7 +58,7 @@ set tcp_file_name "$output_file_name.tcp"
 
 puts "--------------------"
 puts "Setting File: $input_file_name"
-puts "Output File: $output_file_name.\{tr|tcp|tcl\}"
+puts "Output File: $output_file_name.\{tr|tcp|tam\}"
 puts "N: $N"
 puts "Duration: $duration"
 puts "Input Channel Num: $input_ch_num"
