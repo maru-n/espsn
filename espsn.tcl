@@ -7,14 +7,16 @@ source "input_flow.tcl"
 # file format
 # ------------------------
 # N
-# duration
-# input_ch_num
+# duration [sec]
 # link-bps (10Mb)
 # link-delay (10ms)
 # queue-limit (10)
+# input_ch_num
 #
-# time node_id 0|1
-# time node_id 0|1
+# time node[0]{0|1} node[1]{0|1} node[2]{0|1} ... target_signal{0|1}
+# time node[0]{0|1} node[1]{0|1} node[2]{0|1} ... target_signal{0|1}
+# time node[0]{0|1} node[1]{0|1} node[2]{0|1} ... target_signal{0|1}
+#    .
 #    .
 #    .
 #    .
@@ -25,21 +27,26 @@ set output_file_name [lindex $argv 1]
 
 set input_file [open $input_file_name]
 
-set N [gets $input_file]
-set duration [gets $input_file]
-set input_ch_num [gets $input_file]
-set link_bps [gets $input_file]
-set link_delay [gets $input_file]
-set queue_limit [gets $input_file]
+set N [lindex [split [gets $input_file] ":"] 1]
+set duration [lindex [split [gets $input_file] ":"] 1]
+set link_bps [lindex [split [gets $input_file] ":"] 1]
+set link_delay [lindex [split [gets $input_file] ":"] 1]
+set queue_limit [lindex [split [gets $input_file] ":"] 1]
+# esn settings on 3 lines, not used on ns-2
+gets $input_file
+gets $input_file
+gets $input_file
+set input_ch_num [lindex [split [gets $input_file] ":"] 1]
 gets $input_file
 
 while { ! [eof $input_file] } {
   set line [gets $input_file]
   set val [split $line " "]
   set time [lindex $val 0]
-  set input_ch [lindex $val 1]
-  set state [lindex $val 2]
-  lappend input($input_ch) "$time $state"
+  for {set input_ch 0} {$input_ch < $input_ch_num} {incr input_ch} {
+    set state [lindex $val $input_ch+1]
+    lappend input($input_ch) "$time $state"
+  }
 }
 close $input_file
 
@@ -50,8 +57,8 @@ set nam_file_name "$output_file_name.nam"
 set tcp_file_name "$output_file_name.tcp"
 
 puts "--------------------"
-puts "Input File: $input_file_name"
-puts "Output File: $output_file_name.\[tr|tcp|tcl\]"
+puts "Setting File: $input_file_name"
+puts "Output File: $output_file_name.\{tr|tcp|tcl\}"
 puts "N: $N"
 puts "Duration: $duration"
 puts "Input Channel Num: $input_ch_num"
@@ -73,13 +80,13 @@ Agent/TCP set trace_all_oneline_ true
 puts "creating nodes..."
 # $ns_node(0:N) node (TCP client or server)
 for {set i 0} {$i < $N} {incr i} {
-  puts [format "  node(%d)" $i]
+  # puts [format "  node(%d)" $i]
   set node($i) [$ns node]
 }
 
 puts "creating topology..."
 for {set i 0} {$i < $N-1} {incr i} {
-  puts [format "  node(%d) <-> node(%d)" $i [expr $i + 1]]
+  # puts [format "  node(%d) <-> node(%d)" $i [expr $i + 1]]
   eval \$ns duplex-link \$node(\$i) \$node([expr \$i + 1]) $link_params
   $ns queue-limit $node($i) $node([expr $i + 1]) $queue_limit
   $ns queue-limit $node([expr $i + 1]) $node($i) $queue_limit
@@ -91,7 +98,7 @@ for {set i 0} {$i < $N} {incr i} {
     if { $i == $j } {continue}
     set flow_id [expr $i * $N + $j]
     set input_ch [expr $i / ($N / $input_ch_num)]
-    puts [format "  flow: node(%d) -> node(%d) input(%d)" $i $j $input_ch]
+    # puts [format "  flow: node(%d) -> node(%d) input(%d)" $i $j $input_ch]
     set tcp [new Agent/TCP/Newreno]
     set sink [new Agent/TCPSink]
     $tcp attach-trace $tcpfile
@@ -101,7 +108,6 @@ for {set i 0} {$i < $N} {incr i} {
     $ns connect $tcp $sink
     $tcp set fid_ $flow_id
     $ns color 0 blue
-    #set flow [new Application/PeriodicFTP $cycle $duty]
     set flow [new Application/InputFlow $input($input_ch)]
     $flow attach-agent $tcp
     #$ns at 0.0 "$flow run"

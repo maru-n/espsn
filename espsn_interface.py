@@ -1,141 +1,118 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-A minimalistic Echo State Networks demo with Mackey-Glass (delay 17) data
-in "plain" scientific Python.
-by Mantas LukoÅ¡eviÄ?ius 2012
-http://minds.jacobs-university.de/mantas
-"""
 import numpy as np
-from numpy import dot, eye, linalg
-import matplotlib.pyplot as plt
-from matplotlib.mlab import frange
-#from scipy import linalg
+from numpy import dot, eye
+from numpy.linalg import inv
 import sys
-import pdb
-
-
-def convert_cwnd_matrix(raw_data):
-    N = int(np.max(raw_data[:, 1])) + 1
-    cwnd = [[np.empty((0, 2)) for i in range(N)] for j in range(N)]
-    for d in raw_data:
-        src = int(d[1])
-        dst = int(d[2])
-        if src == dst or not(0 <= src < N) or not(0 <= dst < N):
-            continue
-        cwnd[src][dst] = np.vstack((cwnd[src][dst], (d[0], d[3])))
-    return cwnd
+import json
 
 
 #
 # t ----------------------------------------->
 #    init  |   training   |    test         |
-#       init_time      training_time    test_time
+#       init_time      training_time    duration
 #
+class ESPSNExperimentData(object):
 
-def get_output(input_file, target_file):
-    dt = 0.01
-    init_time = 4.0
-    training_time = 200.0
-    test_time = 400.0
-    #training_time = 50.0
-    #test_time = 120.0
+    def __init__(self, setting_file, tcp_log_file):
+        super(ESPSNExperimentData, self).__init__()
 
-    #(time, src, dst, cwnd)
-    data = np.loadtxt(input_file, usecols=(1, 3, 7, 17))
+        # read settings
+        sf = open(setting_file, 'r')
+        N = int(sf.readline().rstrip("\n").split(':')[1])
+        duration = int(sf.readline().rstrip("\n").split(':')[1])
+        link_bps = sf.readline().rstrip("\n").split(':')[1]
+        link_delay = sf.readline().rstrip("\n").split(':')[1]
+        link_queue = sf.readline().rstrip("\n").split(':')[1]
+        init_time = float(sf.readline().rstrip("\n").split(':')[1])
+        training_time = float(sf.readline().rstrip("\n").split(':')[1])
+        esn_dt = float(sf.readline().rstrip("\n").split(':')[1])
+        input_num = int(sf.readline().rstrip("\n").split(':')[1])
+        self.settings = {
+            "N": N,
+            "duration": duration,
+            "link_bps": link_bps,
+            "link_delay": link_delay,
+            "link_queue": link_queue,
+            "init_time": init_time,
+            "training_time": training_time,
+            "esn_dt": esn_dt,
+            "input_num": input_num
+        }
+        sf.close()
 
-    N = int(np.max(data[:, 1])) + 1
-    T = int((training_time - init_time) / dt)
-    Tall = int(test_time / dt)
+        self.time = np.array([s*esn_dt for s in range(int(duration/esn_dt))])
+        time_cnt = len(self.time)
 
-    cwnd_timeseries = np.zeros((N * N - N, Tall))
+        # read target signale and input signals from setting file
+        self.target = np.zeros(time_cnt)
+        self.input = [np.zeros(time_cnt) for i in range(input_num)]
+        for d in np.loadtxt(setting_file, skiprows=10):
+            time = float(d[0])
+            time_idx = int(time / esn_dt)
+            self.target[time_idx:] = int(d[-1])
+            for i in range(input_num):
+                self.input[i][time_idx:] = int(d[i+1])
 
-    for d in data:
-        src = int(d[1])
-        dst = int(d[2])
-        time = float(d[0])
-        cwnd = float(d[3])
-        if src == dst or not(0 <= src < N) or not(0 <= dst < N):
-            continue
-        idx = src * N + dst
-        if src < dst:
-            idx = idx - src - 1
-        else:
-            idx = idx - src
+        # read cwnd output data from tcp file
+        cwnd_cnt = N * N - N
+        self.cwnd = np.zeros((cwnd_cnt, time_cnt))
+        for d in np.loadtxt(tcp_log_file, usecols=(1, 3, 7, 17)):
+            src = int(d[1])
+            dst = int(d[2])
+            time = float(d[0])
+            cwnd = float(d[3])
+            if src == dst or not(0 <= src < N) or not(0 <= dst < N):
+                continue
+            idx = src * N + dst
+            if src < dst:
+                idx = idx - src - 1
+            else:
+                idx = idx - src
 
-        # print src, dst, idx
-        time_idx = int(time / dt)
+            time_idx = int(time / esn_dt)
 
-        if 0 <= time_idx:
-            cwnd_timeseries[idx, time_idx:] = cwnd
-
-    target_data_raw = np.loadtxt(target_file)
-    target_data = np.zeros((1, Tall))
-    input_data1 = np.zeros((1, Tall))
-    input_data2 = np.zeros((1, Tall))
-
-    for i in range(len(target_data_raw)):
-        target_data[0, i] = target_data_raw[i, 0]
-        input_data1[0, i] = target_data_raw[i, 1] / 4. - 0.5
-        input_data2[0, i] = target_data_raw[i, 2] / 4. - 0.9
-
-    # train the output
-    ############
-    # reg = 1e-8  # regularization coefficient
-    ############
-    reg = 1e-6  # regularization coefficient
-    X = cwnd_timeseries[:, int(init_time / dt): int(training_time / dt)]
-    X_T = X.T
-    Yt = target_data[:, int(init_time / dt): int(training_time / dt)]
-    Wout = dot(dot(Yt, X_T), linalg.inv(dot(X, X_T) + reg * eye(X.shape[0])))
-    #Wout = dot( dot(Yt,X_T), linalg.inv( dot(X,X_T)))
-
-    # compute MSE for the first errorLen time steps
-    #mse = sum(square(data[trainLen+1:trainLen+errorLen+1] - Y[0,0:errorLen])) / errorLen
-    # print 'MSE = ' + str( mse )
-
-    Y = dot(Wout, cwnd_timeseries)
-    R = target_data
-
-    plt.figure(0).clear()
-    plt.bar(range(Wout.shape[1]), Wout.T)
-    plt.title('Output weights $\mathbf{W}^{out}$')
-
-    plt.figure(1).clear()
-    plt.plot(dt * np.arange(R.shape[1]), R.T, 'r', linewidth=2)
-
-    plt.plot(dt * np.arange(input_data1.shape[1]),
-             input_data1.T, 'g', linewidth=2)
-    plt.plot(dt * np.arange(input_data2.shape[1]),
-             input_data2.T, 'g', linewidth=2)
-    plt.axvline(x=init_time, color='red')
-    plt.axvline(x=training_time, color='red')
-    plt.plot(dt * np.arange(Y.shape[1]), Y.T, 'c')
-
-    #combolution
-    filter = np.ones(100)/100.0
-    C = np.convolve(Y[0,:], filter,'valid')
-    plt.plot(dt * np.arange(C.shape[0]), C, 'b', linewidth=2)
+            if 0 <= time_idx:
+                self.cwnd[idx, time_idx:] = cwnd
 
 
-    # check plot
-    # plt.figure(10).clear()
-    # plt.plot(range(target_data.shape[1]), target_data.T)
-    # plt.ylim(0,1.5)
-    # plt.plot(frange(init_time, training_time, dt)[:-1],
-    #          cwnd_timeseries[89, :])
-    # src = 9
-    # dst = 8
-    # cwnd_raw = convert_cwnd_matrix(data)
-    # target = cwnd_raw[src][dst]
-    # plt.plot(target[:,0], target[:,1], '.')
-    # plt.plot(target[:,0], target[:,1], drawstyle='steps-post')
-    # plt.ylim(1,40)
-
-    plt.show()
+def train_weight(data, instruction, reg_coef=1e-8):
+    X = data
+    Yt = instruction
+    Wout = dot(dot(Yt, X.T), inv(dot(X, X.T) + reg_coef * eye(X.shape[0])))
+    #Wout = dot( dot(Yt,X.T), linalg.inv( dot(X,X.T)))
+    return Wout
 
 
 if __name__ == '__main__':
-    #experiment_dir_name = sys.argv[1]
-    get_output(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 3:
+        print "espsn_interface.py SETTING_FILE TCP_LOG_FILE [OUTPUT_PREFIX]"
+    print "reading settings and data..."
+    data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
+    if len(sys.argv) >= 4:
+        output_prefix = sys.argv[3]
+    else:
+        output_prefix = ""
+
+    print "training wegihts..."
+    init_time = data.settings["init_time"]
+    training_time = data.settings["training_time"]
+    esn_dt = data.settings["esn_dt"]
+    start_time_idx = int(init_time / esn_dt)
+    end_time_idx = int(training_time / esn_dt)
+    cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
+    target4training = data.target[start_time_idx:end_time_idx]
+    weight = train_weight(cwnd4training, target4training)
+
+    output = dot(weight, data.cwnd)
+
+    np.save(output_prefix+"time", data.time)
+    np.save(output_prefix+"cwnd", data.cwnd)
+    np.save(output_prefix+"weight", weight)
+    np.save(output_prefix+"target", data.target)
+    np.save(output_prefix+"input", data.input)
+    np.save(output_prefix+"output", output)
+
+    setting_file = open(output_prefix+"settings.json", "w")
+    setting_file.write(json.dumps(data.settings))
