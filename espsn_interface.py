@@ -6,6 +6,7 @@ from numpy import dot, eye
 from numpy.linalg import inv
 import sys
 import json
+from os.path import join
 
 
 #
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     if len(sys.argv) >= 4:
         output_prefix = sys.argv[3]
     else:
-        output_prefix = ""
+        output_prefix = "./"
 
     print "training wegihts..."
     init_time = data.settings["init_time"]
@@ -107,12 +108,12 @@ if __name__ == '__main__':
 
     output = dot(weight, data.cwnd)
 
-    np.save(output_prefix+"time", data.time)
-    np.save(output_prefix+"cwnd", data.cwnd)
-    np.save(output_prefix+"weight", weight)
-    np.save(output_prefix+"target", data.target)
-    np.save(output_prefix+"input", data.input)
-    np.save(output_prefix+"output", output)
+    np.save(join(output_prefix, "time"), data.time)
+    np.save(join(output_prefix, "cwnd"), data.cwnd)
+    np.save(join(output_prefix, "weight"), weight)
+    np.save(join(output_prefix, "target"), data.target)
+    np.save(join(output_prefix, "input"), data.input)
+    np.save(join(output_prefix, "output"), output)
 
-    setting_file = open(output_prefix+"settings.json", "w")
+    setting_file = open(join(output_prefix, "settings.json"), "w")
     setting_file.write(json.dumps(data.settings))
