@@ -1,5 +1,6 @@
 SETTING_GENERATOR="../../setting_generator.py"
 WORK_DIR="~/espsn/scripts/N-T_search"
+ESPSN="./espsn"
 
 for N in `seq 4 4 64`
 do
@@ -23,6 +24,6 @@ do
         echo "#!/bin/sh" > $qsub_script
         echo "#PBS -l walltime=60:00:00" >> $qsub_script
         echo "cd ${WORK_DIR}" >> $qsub_script
-        echo "espsn -o ${output_file} ${setting_file}" >> $qsub_script
+        echo "${ESPSN} -o ${output_file} ${setting_file}" >> $qsub_script
     done
 done

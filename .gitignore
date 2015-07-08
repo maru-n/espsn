@@ -5,3 +5,5 @@ data/*.tcp
 data
 _old
 notebook/.ipynb_checkpoints
+scripts/N-T_search/*_settings.txt
+scripts/N-T_search/*_qsub-run.sh
