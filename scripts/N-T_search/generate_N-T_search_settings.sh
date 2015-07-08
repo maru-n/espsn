@@ -10,7 +10,7 @@ do
         setting_file=`printf "N%02d-T%04d_settings.txt" $N $T`
         qsub_script=`printf "N%02d-T%04d_qsub-run.sh" $N $T`
         output_file=`printf "N%02d-T%04d" $N $T`
-        echo $setting_file
+        echo "N:${N} T:${T}"
         python $SETTING_GENERATOR \
         -o $setting_file \
         -N $N \
