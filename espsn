@@ -21,21 +21,22 @@ do
 done
 shift $((OPTIND - 1))
 
-WORK_DIR=`dirname $0`
+SCRIPT=$0
+if [ -n "`readlink $SCRIPT`" ] ; then
+    SCRIPT="`readlink $SCRIPT`"
+fi
+SRC_DIR=$(cd $(dirname $SCRIPT) && pwd)/src
 NS2_SCRIPT=espsn.tcl
 ESPSN_SCRIPT=espsn_interface.py
 SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
-OUTPUT_DIR=`dirname $SETTING_FILE`
+WORKING_DIR=`dirname $SETTING_FILE`
 
-cd $WORK_DIR
-
-NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}"
-#echo $NS2_CMD
+cd $SRC_DIR
+NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}"
 eval $NS2_CMD
 
 if [ ! $NO_ESN_CALC_FLAG ] ; then
-    ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}.tcp ${OUTPUT_DIR}/${OUTPUT_FILENAME}"
-    #echo $ESPSN_CMD
+    ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}.tcp ${WORKING_DIR}/${OUTPUT_FILENAME}"
     eval $ESPSN_CMD
 fi
 

@@ -121,7 +121,7 @@ if __name__ == '__main__':
         output_prefix = sys.argv[3]
     else:
         output_prefix = "./out"
-    output_prefix = output_prefix + "_"
+    output_prefix = output_prefix + "."
 
     #reg_coef = 1
     reg_coef = 1e-2
