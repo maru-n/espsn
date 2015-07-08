@@ -6,7 +6,8 @@ from numpy import dot, eye
 from numpy.linalg import inv
 import sys
 import json
-from os.path import join
+from os.path import join, splitext
+import pdb
 
 
 #
@@ -16,7 +17,7 @@ from os.path import join
 #
 class ESPSNExperimentData(object):
 
-    def __init__(self, setting_file, tcp_log_file):
+    def __init__(self, setting_file, tcp_cwnd_log_file):
         super(ESPSNExperimentData, self).__init__()
 
         # read settings
@@ -59,23 +60,48 @@ class ESPSNExperimentData(object):
         # read cwnd output data from tcp file
         cwnd_cnt = N * N - N
         self.cwnd = np.zeros((cwnd_cnt, time_cnt))
-        for d in np.loadtxt(tcp_log_file, usecols=(1, 3, 7, 17)):
-            src = int(d[1])
-            dst = int(d[2])
-            time = float(d[0])
-            cwnd = float(d[3])
-            if src == dst or not(0 <= src < N) or not(0 <= dst < N):
-                continue
-            idx = src * N + dst
-            if src < dst:
-                idx = idx - src - 1
-            else:
-                idx = idx - src
+        #TODO:
+        #cnt = np.ones((cwnd_cnt, time_cnt))
 
-            time_idx = int(time / esn_dt)
+        if splitext(tcp_cwnd_log_file)[1] == ".npy":
+            self.cwnd = np.load(tcp_cwnd_log_file)
+        else:
+            for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
+            #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
+                src = int(d[1])
+                dst = int(d[2])
+                time = float(d[0])
+                cwnd = float(d[3])
+                if src == dst or not(0 <= src < N) or not(0 <= dst < N):
+                    continue
+                idx = src * N + dst
+                if src < dst:
+                    idx = idx - src - 1
+                else:
+                    idx = idx - src
 
-            if 0 <= time_idx:
-                self.cwnd[idx, time_idx:] = cwnd
+                time_idx = int(time / esn_dt)
+
+                if 0 <= time_idx:
+                    self.cwnd[idx, time_idx:] = float(cwnd)
+                    #self.cwnd[idx, time_idx:] += float(cwnd)
+                    #cnt[idx, time_idx:] += float(1)
+
+        #self.cwnd = self.cwnd / cnt
+
+        dmax = self.cwnd.max()
+        dmin = self.cwnd.min()
+        norm_cwnd = (self.cwnd-dmin).astype(float) / (dmax-dmin).astype(float)
+        self.cwnd = norm_cwnd
+
+        cwnd_peak = []
+        for c in self.cwnd:
+            local_max = np.r_[True, c[1:] >= c[:-1]] & np.r_[c[:-1] >= c[1:], True]
+            peak_list = [c for c, b in zip(c, local_max) if b]
+            peak_time = [t for t, b in zip(self.time, local_max) if b]
+            peak_series = np.interp(self.time, peak_time, peak_list)
+            cwnd_peak.append(peak_series)
+        self.cwnd_peak = np.array(cwnd_peak)
 
 
 def train_weight(data, instruction, reg_coef=1e-8):
@@ -88,13 +114,17 @@ def train_weight(data, instruction, reg_coef=1e-8):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print "espsn_interface.py SETTING_FILE TCP_LOG_FILE [OUTPUT_PREFIX]"
+        print "espsn_interface.py SETTING_FILE {TCP_LOG_FILE|CWND_NPY_FILE} [OUTPUT_PREFIX]"
     print "reading settings and data..."
     data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
     if len(sys.argv) >= 4:
         output_prefix = sys.argv[3]
     else:
-        output_prefix = "./"
+        output_prefix = "./out"
+    output_prefix = output_prefix + "_"
+
+    #reg_coef = 1
+    reg_coef = 1e-2
 
     print "training wegihts..."
     init_time = data.settings["init_time"]
@@ -102,18 +132,37 @@ if __name__ == '__main__':
     esn_dt = data.settings["esn_dt"]
     start_time_idx = int(init_time / esn_dt)
     end_time_idx = int(training_time / esn_dt)
-    cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
+
+    use_peak = False
+    if use_peak:
+        cwnd4training = data.cwnd_peak[:, start_time_idx:end_time_idx]
+    else:
+        cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
+
     target4training = data.target[start_time_idx:end_time_idx]
-    weight = train_weight(cwnd4training, target4training)
+    weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
+    if use_peak:
+        output = dot(weight, data.cwnd_peak)
+    else:
+        output = dot(weight, data.cwnd)
 
-    output = dot(weight, data.cwnd)
+    # np.save(join(output_prefix, "time"), data.time)
+    # np.save(join(output_prefix, "cwnd"), data.cwnd)
+    # np.save(join(output_prefix, "cwnd_peak"), data.cwnd_peak)
+    # np.save(join(output_prefix, "weight"), weight)
+    # np.save(join(output_prefix, "target"), data.target)
+    # np.save(join(output_prefix, "input"), data.input)
+    # np.save(join(output_prefix, "output"), output)
 
-    np.save(join(output_prefix, "time"), data.time)
-    np.save(join(output_prefix, "cwnd"), data.cwnd)
-    np.save(join(output_prefix, "weight"), weight)
-    np.save(join(output_prefix, "target"), data.target)
-    np.save(join(output_prefix, "input"), data.input)
-    np.save(join(output_prefix, "output"), output)
+    np.save((output_prefix + "time"), data.time)
+    np.save((output_prefix + "cwnd"), data.cwnd)
+    np.save((output_prefix + "cwnd_peak"), data.cwnd_peak)
+    np.save((output_prefix + "weight"), weight)
+    np.save((output_prefix + "target"), data.target)
+    np.save((output_prefix + "input"), data.input)
+    np.save((output_prefix + "output"), output)
 
-    setting_file = open(join(output_prefix, "settings.json"), "w")
+    data.settings["reg_coefficient"] = reg_coef
+    #setting_file = open(join(output_prefix, "settings.json"), "w")
+    setting_file = open((output_prefix + "settings.json"), "w")
     setting_file.write(json.dumps(data.settings))

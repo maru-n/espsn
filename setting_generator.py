@@ -2,11 +2,9 @@
 
 import numpy as np
 
-RONDOM_SEED = None
-
 
 def generate_settings(type, N=10, duration=200,
-                      one_signal_duration=4,
+                      one_signal_duration=4.,
                       esn_init_time=4,
                       esn_training_time=100,
                       esn_dt=0.1):
@@ -18,6 +16,8 @@ def generate_settings(type, N=10, duration=200,
     setting_str += ("link_bps:10Mb\n")
     setting_str += ("link_delay:10ms\n")
     setting_str += ("link_queue:10\n")
+    #setting_str += ("duty_low:%f\n")
+    #setting_str += ("duty_high:%f\n")
     setting_str += ("esn_init_time:%f\n" % esn_init_time)
     setting_str += ("esn_training_time:%f\n" % esn_training_time)
     setting_str += ("esn_dt:%f\n" % esn_dt)
@@ -26,7 +26,7 @@ def generate_settings(type, N=10, duration=200,
         setting_str += ("input:2\n")
         setting_str += ("\n")
 
-        step_num = duration/one_signal_duration
+        step_num = int(duration/one_signal_duration)
 
         in1 = [np.random.randint(0, 2) for i in range(step_num)]
         in2 = [np.random.randint(0, 2) for i in range(step_num)]
@@ -48,7 +48,7 @@ def generate_settings(type, N=10, duration=200,
         setting_str += "input:1\n"
         setting_str += "\n"
 
-        step_num = duration/one_signal_duration
+        step_num = int(duration/one_signal_duration)
 
         in1 = [np.random.randint(0, 2) for i in range(step_num)]
 
@@ -66,6 +66,20 @@ def generate_settings(type, N=10, duration=200,
             target = 1 if current_parity else 0
             setting_str += ("%f %d %d\n" % (time, in1[i], target))
 
+    elif type == 'delay':
+        setting_str += "input:1\n"
+        setting_str += "\n"
+
+        step_num = int(duration/one_signal_duration)
+
+        in1 = [np.random.randint(0, 2) for i in range(step_num)]
+
+        current_parity = True
+        for i in range(step_num):
+            time = float(i * one_signal_duration)
+            target = in1[i-1]
+            setting_str += ("%f %d %d\n" % (time, in1[i], target))
+
     return setting_str
 
 
@@ -79,15 +93,10 @@ if __name__ == '__main__':
                       default="settings.txt",
                       help="write output to FILE",
                       metavar="FILE")
-    parser.add_option("-r",
-                      dest="random_seed",
-                      type='int',
-                      default=None,
-                      help="random seed value", metavar="SEED")
     parser.add_option("-t",
                       "--type",
                       dest="type",
-                      choices=["xor", "parity"],
+                      choices=["xor", "parity", "delay"],
                       type="choice",
                       default="xor",
                       help="time series type")
@@ -96,21 +105,46 @@ if __name__ == '__main__':
                       type="int",
                       default=10,
                       help="node num")
+    parser.add_option("--random-seed",
+                      dest="random_seed",
+                      type="int",
+                      default=None,
+                      help="random seed")
+    parser.add_option("--duration",
+                      dest="duration",
+                      type="int",
+                      default=500,
+                      help="experimental duration")
+    parser.add_option("--init-time",
+                      dest="init_time",
+                      type="int",
+                      default=100,
+                      help="experimental initialization time in duration")
+    parser.add_option("--training-time",
+                      dest="training_time",
+                      type="int",
+                      default=300,
+                      help="experimental training time in duration")
+    parser.add_option("--one-signal-duration",
+                      dest="one_signal_duration",
+                      type="float",
+                      default=4.0,
+                      help="duration of a 0/1 signal")
 
-    (options, args) = parser.parse_args()
+    (opts, args) = parser.parse_args()
 
-    np.random.seed(options.random_seed)
+    np.random.seed(opts.random_seed)
 
-    settings = generate_settings(options.type,
-                                 N=options.N,
-                                 duration=400,
-                                 one_signal_duration=4,
-                                 esn_init_time=4,
-                                 esn_training_time=200,
+    settings = generate_settings(opts.type,
+                                 N=opts.N,
+                                 duration=opts.duration,
+                                 one_signal_duration=opts.one_signal_duration,
+                                 esn_init_time=opts.init_time,
+                                 esn_training_time=opts.training_time,
                                  esn_dt=0.1)
 
-    if options.output_filename:
-        output = open(options.output_filename, 'w')
+    if opts.output_filename:
+        output = open(opts.output_filename, 'w')
         output.write(settings)
     else:
-        print settings
+        print(settings)

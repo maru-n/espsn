@@ -1,4 +1,4 @@
-source "input_flow.tcl"
+source "application.tcl"
 
 #
 # node0 --- node1 --- node2 ... nodeN
@@ -25,6 +25,12 @@ source "input_flow.tcl"
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
 
+set cycle [lindex $argv 2]
+set duty [lindex $argv 3]
+# puts "--------------------"
+# puts "Cycle: $cycle"
+# puts "Duty: $duty"
+
 set input_file [open $input_file_name]
 
 set N [lindex [split [gets $input_file] ":"] 1]
@@ -32,6 +38,10 @@ set duration [lindex [split [gets $input_file] ":"] 1]
 set link_bps [lindex [split [gets $input_file] ":"] 1]
 set link_delay [lindex [split [gets $input_file] ":"] 1]
 set queue_limit [lindex [split [gets $input_file] ":"] 1]
+
+#set duty_low [lindex [split [gets $input_file] ":"] 1]
+#set duty_high [lindex [split [gets $input_file] ":"] 1]
+
 # esn settings on 3 lines, not used on ns-2
 gets $input_file
 gets $input_file
@@ -55,6 +65,7 @@ set link_params "$link_bps $link_delay DropTail"
 set trace_file_name "$output_file_name.tr"
 set nam_file_name "$output_file_name.nam"
 set tcp_file_name "$output_file_name.tcp"
+set network_file_name "$output_file_name.network"
 
 puts "--------------------"
 puts "Setting File: $input_file_name"
@@ -70,12 +81,12 @@ puts "initializing simulator..."
 set ns [new Simulator]
 $ns at $duration "exit 0"
 
-set tracefile [open $trace_file_name w]
-$ns trace-all $tracefile
-set namfile [open $nam_file_name w]
-$ns namtrace-all $namfile
+#set tracefile [open $trace_file_name w]
+#$ns trace-all $tracefile
+#set namfile [open $nam_file_name w]
+#$ns namtrace-all $namfile
 set tcpfile [open $tcp_file_name w]
-Agent/TCP set trace_all_oneline_ true
+#Agent/TCP set trace_all_oneline_ true
 
 puts "creating nodes..."
 # $ns_node(0:N) node (TCP client or server)
@@ -85,12 +96,30 @@ for {set i 0} {$i < $N} {incr i} {
 }
 
 puts "creating topology..."
+set networkfile [open $network_file_name w]
 for {set i 0} {$i < $N-1} {incr i} {
+  #------------------
+  # 1-d grid
+  #------------------
   # puts [format "  node(%d) <-> node(%d)" $i [expr $i + 1]]
   eval \$ns duplex-link \$node(\$i) \$node([expr \$i + 1]) $link_params
   $ns queue-limit $node($i) $node([expr $i + 1]) $queue_limit
   $ns queue-limit $node([expr $i + 1]) $node($i) $queue_limit
+
+  #------------------
+  # random graph
+  #------------------
+  # for {set j [expr $i + 1]} {$j < $N} {incr j} {
+  #   if { 0.5 < [expr rand()]} {
+  #     #puts [format "  node(%d) <-> node(%d)" $i $j]
+  #     puts $networkfile [format "%d %d" $i $j]
+  #     eval \$ns duplex-link \$node(\$i) \$node(\$j) $link_params
+  #     $ns queue-limit $node($i) $node($j) $queue_limit
+  #     $ns queue-limit $node($j) $node($i) $queue_limit
+  #   }
+  # }
 }
+close $networkfile
 
 puts "creating flows..."
 for {set i 0} {$i < $N} {incr i} {
@@ -101,16 +130,43 @@ for {set i 0} {$i < $N} {incr i} {
     # puts [format "  flow: node(%d) -> node(%d) input(%d)" $i $j $input_ch]
     set tcp [new Agent/TCP/Newreno]
     set sink [new Agent/TCPSink]
-    $tcp attach-trace $tcpfile
     $tcp trace cwnd_
+    $tcp attach-trace $tcpfile
     $ns attach-agent $node($i) $tcp
     $ns attach-agent $node($j) $sink
     $ns connect $tcp $sink
     $tcp set fid_ $flow_id
     $ns color 0 blue
-    set flow [new Application/InputFlow $input($input_ch)]
-    $flow attach-agent $tcp
+
+    #------------------
+    # periodic
+    #------------------
+    #set flow [new Application/PeriodicFTP $cycle $duty]
+    #$flow attach-agent $tcp
     #$ns at 0.0 "$flow run"
+
+    #------------------
+    # Use duty rate
+    #------------------
+    # set flow [new Application/InputFlowDuty $input($input_ch)]
+    # $flow attach-agent $tcp
+    # $ns at 0.0 "$flow run"
+
+    #------------------
+    # Normal
+    #------------------
+    # set flow [new Application/InputFlow $input($input_ch)]
+    # $flow attach-agent $tcp
+
+    #------------------
+    # Reversed input
+    #------------------
+    if { ($i - $j) % 2 == 0 } {
+      set flow [new Application/InputFlowReverse $input($input_ch)]
+    } else {
+      set flow [new Application/InputFlow $input($input_ch)]
+    }
+    $flow attach-agent $tcp
   }
 }
 

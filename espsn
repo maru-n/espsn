@@ -1,17 +1,41 @@
 #! /bin/bash
 
+usage_exit() {
+        echo "Usage: $0 [-n] [-h] [-o ] setting.txt" 1>&2
+        exit 1
+}
+
+OUTPUT_FILENAME=out
+while getopts no:h OPT
+do
+    case $OPT in
+        n) NO_ESN_CALC_FLAG=true
+            ;;
+        o)  OUTPUT_FILENAME=$OPTARG
+            ;;
+        h)  usage_exit
+            ;;
+        \?) usage_exit
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 WORK_DIR=`dirname $0`
 NS2_SCRIPT=espsn.tcl
 ESPSN_SCRIPT=espsn_interface.py
 SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
-OUTPUT_FILENAME=out
 OUTPUT_DIR=`dirname $SETTING_FILE`
 
 cd $WORK_DIR
 
 NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}"
+#echo $NS2_CMD
 eval $NS2_CMD
 
-ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}.tcp ${OUTPUT_DIR}"
-eval $ESPSN_CMD
+if [ ! $NO_ESN_CALC_FLAG ] ; then
+    ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_DIR}/${OUTPUT_FILENAME}.tcp ${OUTPUT_DIR}/${OUTPUT_FILENAME}"
+    #echo $ESPSN_CMD
+    eval $ESPSN_CMD
+fi
 

@@ -3,3 +3,5 @@ data/*.nam
 data/*.tr
 data/*.tcp
 data
+_old
+notebook/.ipynb_checkpoints
