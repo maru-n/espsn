@@ -1,5 +1,5 @@
 SETTING_GENERATOR="../../setting_generator.py"
-WORK_DIR="~/test"
+WORK_DIR="~/espsn/scripts/N-T_search"
 
 for N in `seq 4 4 64`
 do
