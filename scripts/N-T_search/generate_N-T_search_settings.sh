@@ -7,7 +7,7 @@ EVAL_TIME=100
 
 for N in `seq 8 8 64`
 do
-    for T in `seq 100 200 500`
+    for T in `seq 100 100 500`
     do
         duration=`expr $T + $INIT_TIME + $EVAL_TIME`
         setting_file=`printf "N%02d-T%04d_settings.txt" $N $T`

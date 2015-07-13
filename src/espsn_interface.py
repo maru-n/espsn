@@ -66,8 +66,8 @@ class ESPSNExperimentData(object):
         if splitext(tcp_cwnd_log_file)[1] == ".npy":
             self.cwnd = np.load(tcp_cwnd_log_file)
         else:
-            for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
-            #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
+            #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
+            for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
                 src = int(d[1])
                 dst = int(d[2])
                 time = float(d[0])
