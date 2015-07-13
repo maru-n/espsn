@@ -2,11 +2,14 @@ SETTING_GENERATOR="../../setting_generator.py"
 WORK_DIR="~/espsn/scripts/N-T_search"
 ESPSN="./espsn"
 
+INIT_TIME=10
+EVAL_TIME=100
+
 for N in `seq 8 8 64`
 do
     for T in `seq 100 200 500`
     do
-        duration=`expr $T + 100 + 500`
+        duration=`expr $T + $INIT_TIME + $EVAL_TIME`
         setting_file=`printf "N%02d-T%04d_settings.txt" $N $T`
         output_file=`printf "N%02d-T%04d" $N $T`
         echo "N:${N} T:${T}"
