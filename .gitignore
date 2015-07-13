@@ -9,3 +9,5 @@ scripts/N-T_search/*_settings.txt
 scripts/N-T_search/*_qsub-run.sh
 scripts/N-T_search/*.network
 scripts/N-T_search/*.tcp
+scripts/N-T_search/*.npy
+scripts/N-T_search/*.settings.json

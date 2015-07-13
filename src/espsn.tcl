@@ -86,7 +86,7 @@ $ns at $duration "exit 0"
 #set namfile [open $nam_file_name w]
 #$ns namtrace-all $namfile
 set tcpfile [open $tcp_file_name w]
-#Agent/TCP set trace_all_oneline_ true
+Agent/TCP set trace_all_oneline_ true
 
 puts "creating nodes..."
 # $ns_node(0:N) node (TCP client or server)
@@ -105,6 +105,7 @@ for {set i 0} {$i < $N-1} {incr i} {
   eval \$ns duplex-link \$node(\$i) \$node([expr \$i + 1]) $link_params
   $ns queue-limit $node($i) $node([expr $i + 1]) $queue_limit
   $ns queue-limit $node([expr $i + 1]) $node($i) $queue_limit
+  puts $networkfile [format "%d %d" $i [expr $i + 1]]
 
   #------------------
   # random graph
@@ -112,10 +113,10 @@ for {set i 0} {$i < $N-1} {incr i} {
   # for {set j [expr $i + 1]} {$j < $N} {incr j} {
   #   if { 0.5 < [expr rand()]} {
   #     #puts [format "  node(%d) <-> node(%d)" $i $j]
-  #     puts $networkfile [format "%d %d" $i $j]
   #     eval \$ns duplex-link \$node(\$i) \$node(\$j) $link_params
   #     $ns queue-limit $node($i) $node($j) $queue_limit
   #     $ns queue-limit $node($j) $node($i) $queue_limit
+  #     puts $networkfile [format "%d %d" $i $j]
   #   }
   # }
 }

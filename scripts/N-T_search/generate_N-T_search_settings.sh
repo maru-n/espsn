@@ -28,5 +28,6 @@ do
         echo "#PBS -l walltime=60:00:00" >> $qsub_script
         echo "cd ${WORK_DIR}" >> $qsub_script
         echo "${ESPSN} -o ${output_file} ${setting_file}" >> $qsub_script
+        #echo "rm ${output_file}.tcp" >> $qsub_script
     done
 done
