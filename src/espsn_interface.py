@@ -19,30 +19,12 @@ class ESPSNExperimentData(object):
 
     def __init__(self, setting_file, tcp_cwnd_log_file):
         super(ESPSNExperimentData, self).__init__()
+        self.settings = self.__read_setting_file(setting_file)
 
-        # read settings
-        sf = open(setting_file, 'r')
-        N = int(sf.readline().rstrip("\n").split(':')[1])
-        duration = int(sf.readline().rstrip("\n").split(':')[1])
-        link_bps = sf.readline().rstrip("\n").split(':')[1]
-        link_delay = sf.readline().rstrip("\n").split(':')[1]
-        link_queue = sf.readline().rstrip("\n").split(':')[1]
-        init_time = float(sf.readline().rstrip("\n").split(':')[1])
-        training_time = float(sf.readline().rstrip("\n").split(':')[1])
-        esn_dt = float(sf.readline().rstrip("\n").split(':')[1])
-        input_num = int(sf.readline().rstrip("\n").split(':')[1])
-        self.settings = {
-            "N": N,
-            "duration": duration,
-            "link_bps": link_bps,
-            "link_delay": link_delay,
-            "link_queue": link_queue,
-            "init_time": init_time,
-            "training_time": training_time,
-            "esn_dt": esn_dt,
-            "input_num": input_num
-        }
-        sf.close()
+        N = self.settings["N"]
+        duration = self.settings["duration"]
+        esn_dt = self.settings["esn_dt"]
+        input_num = self.settings["input_num"]
 
         self.time = np.array([s*esn_dt for s in range(int(duration/esn_dt))])
         time_cnt = len(self.time)
@@ -103,49 +85,103 @@ class ESPSNExperimentData(object):
             cwnd_peak.append(peak_series)
         self.cwnd_peak = np.array(cwnd_peak)
 
+    def __read_setting_file(self, setting_file):
+        sf = open(setting_file, 'r')
+        N = int(sf.readline().rstrip("\n").split(':')[1])
+        duration = int(sf.readline().rstrip("\n").split(':')[1])
+        link_bps = sf.readline().rstrip("\n").split(':')[1]
+        link_delay = sf.readline().rstrip("\n").split(':')[1]
+        link_queue = sf.readline().rstrip("\n").split(':')[1]
+        init_time = float(sf.readline().rstrip("\n").split(':')[1])
+        training_time = float(sf.readline().rstrip("\n").split(':')[1])
+        esn_dt = float(sf.readline().rstrip("\n").split(':')[1])
+        input_num = int(sf.readline().rstrip("\n").split(':')[1])
+        sf.close()
+        settings = {
+            "N": N,
+            "duration": duration,
+            "link_bps": link_bps,
+            "link_delay": link_delay,
+            "link_queue": link_queue,
+            "init_time": init_time,
+            "training_time": training_time,
+            "esn_dt": esn_dt,
+            "input_num": input_num
+        }
+        return settings
 
-def train_weight(data, instruction, reg_coef=1e-8):
-    X = data
-    Yt = instruction
+
+def train_weight(output_data, instruction_data, reg_coef=1e-8):
+    X = output_data
+    Yt = instruction_data
     Wout = dot(dot(Yt, X.T), inv(dot(X, X.T) + reg_coef * eye(X.shape[0])))
     #Wout = dot( dot(Yt,X.T), linalg.inv( dot(X,X.T)))
     return Wout
 
+def train_weight_and_reg_coef_search(experimant_data, reg_coefs=[10**(-i) for i in range(0,10)]):
+    reg_coef = 1e-2
+    init_time = experimant_data.settings["init_time"]
+    training_time = experimant_data.settings["training_time"]
+    esn_dt = experimant_data.settings["esn_dt"]
+    start_time_idx = int(init_time / esn_dt)
+    end_time_idx = int(training_time / esn_dt)
+
+    use_peak = False
+    if use_peak:
+        cwnd4training = experimant_data.cwnd_peak[:, start_time_idx:end_time_idx]
+    else:
+        cwnd4training = experimant_data.cwnd[:, start_time_idx:end_time_idx]
+
+    target4training = experimant_data.target[start_time_idx:end_time_idx]
+    weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
+    if use_peak:
+        output = dot(weight, experimant_data.cwnd_peak)
+    else:
+        output = dot(weight, experimant_data.cwnd)
+    return weight, output, reg_coefs
+    # for rc in reg_coefs:
+    #     train_weight(experimant_data, instruction, rc)
+
+
+def print_status(msg):
+    print("\033[34m[ESN]\033[39m " + msg)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print "espsn_interface.py SETTING_FILE {TCP_LOG_FILE|CWND_NPY_FILE} [OUTPUT_PREFIX]"
-    print "reading settings and data..."
-    data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
+        print("espsn_interface.py SETTING_FILE {TCP_LOG_FILE|CWND_NPY_FILE} [OUTPUT_PREFIX]")
+
     if len(sys.argv) >= 4:
         output_prefix = sys.argv[3]
     else:
         output_prefix = "./out"
     output_prefix = output_prefix + "."
 
-    #reg_coef = 1
-    reg_coef = 1e-2
+    print_status("reading settings and data...")
+    data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
 
-    print "training wegihts..."
-    init_time = data.settings["init_time"]
-    training_time = data.settings["training_time"]
-    esn_dt = data.settings["esn_dt"]
-    start_time_idx = int(init_time / esn_dt)
-    end_time_idx = int(training_time / esn_dt)
+    print_status("training wegihts...")
+    weight, output, reg_coef = train_weight_and_reg_coef_search(data)
+    # init_time = data.settings["init_time"]
+    # training_time = data.settings["training_time"]
+    # esn_dt = data.settings["esn_dt"]
+    # start_time_idx = int(init_time / esn_dt)
+    # end_time_idx = int(training_time / esn_dt)
 
-    use_peak = False
-    if use_peak:
-        cwnd4training = data.cwnd_peak[:, start_time_idx:end_time_idx]
-    else:
-        cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
+    # use_peak = False
+    # if use_peak:
+    #     cwnd4training = data.cwnd_peak[:, start_time_idx:end_time_idx]
+    # else:
+    #     cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
 
-    target4training = data.target[start_time_idx:end_time_idx]
-    weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
-    if use_peak:
-        output = dot(weight, data.cwnd_peak)
-    else:
-        output = dot(weight, data.cwnd)
+    # target4training = data.target[start_time_idx:end_time_idx]
+    # weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
+    # if use_peak:
+    #     output = dot(weight, data.cwnd_peak)
+    # else:
+    #     output = dot(weight, data.cwnd)
 
+    print_status("saving result...")
     # np.save(join(output_prefix, "time"), data.time)
     # np.save(join(output_prefix, "cwnd"), data.cwnd)
     # np.save(join(output_prefix, "cwnd_peak"), data.cwnd_peak)

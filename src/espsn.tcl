@@ -77,7 +77,7 @@ puts "Link: $link_bps, $link_delay, $queue_limit packets queue"
 puts "--------------------"
 
 
-puts "initializing simulator..."
+puts "\033\[32m\[PSN\]\033\[39m initializing simulator..."
 set ns [new Simulator]
 $ns at $duration "exit 0"
 
@@ -88,14 +88,14 @@ $ns at $duration "exit 0"
 set tcpfile [open $tcp_file_name w]
 Agent/TCP set trace_all_oneline_ true
 
-puts "creating nodes..."
+puts "\033\[32m\[PSN\]\033\[39m creating nodes..."
 # $ns_node(0:N) node (TCP client or server)
 for {set i 0} {$i < $N} {incr i} {
   # puts [format "  node(%d)" $i]
   set node($i) [$ns node]
 }
 
-puts "creating topology..."
+puts "\033\[32m\[PSN\]\033\[39m creating topology..."
 set networkfile [open $network_file_name w]
 for {set i 0} {$i < $N-1} {incr i} {
   #------------------
@@ -122,7 +122,7 @@ for {set i 0} {$i < $N-1} {incr i} {
 }
 close $networkfile
 
-puts "creating flows..."
+puts "\033\[32m\[PSN\]\033\[39m creating flows..."
 for {set i 0} {$i < $N} {incr i} {
   for {set j 0} {$j < $N} {incr j} {
     if { $i == $j } {continue}
@@ -171,5 +171,5 @@ for {set i 0} {$i < $N} {incr i} {
   }
 }
 
-puts "starting simulation..."
+puts "\033\[32m\[PSN\]\033\[39m simulation..."
 $ns run

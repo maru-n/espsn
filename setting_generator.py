@@ -119,12 +119,12 @@ if __name__ == '__main__':
                       dest="init_time",
                       type="int",
                       default=100,
-                      help="experimental initialization time in duration")
+                      help="end time of initializaion (< duration)")
     parser.add_option("--training-time",
                       dest="training_time",
                       type="int",
                       default=300,
-                      help="experimental training time in duration")
+                      help="end time of training (< duration)")
     parser.add_option("--one-signal-duration",
                       dest="one_signal_duration",
                       type="float",
