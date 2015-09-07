@@ -10,6 +10,8 @@ from os.path import join, splitext
 import pdb
 
 
+USE_PEAK = False
+
 #
 # t ----------------------------------------->
 #    init  |   training   |    test         |
@@ -76,14 +78,15 @@ class ESPSNExperimentData(object):
         norm_cwnd = (self.cwnd-dmin).astype(float) / (dmax-dmin).astype(float)
         self.cwnd = norm_cwnd
 
-        cwnd_peak = []
-        for c in self.cwnd:
-            local_max = np.r_[True, c[1:] >= c[:-1]] & np.r_[c[:-1] >= c[1:], True]
-            peak_list = [c for c, b in zip(c, local_max) if b]
-            peak_time = [t for t, b in zip(self.time, local_max) if b]
-            peak_series = np.interp(self.time, peak_time, peak_list)
-            cwnd_peak.append(peak_series)
-        self.cwnd_peak = np.array(cwnd_peak)
+        if USE_PEAK:
+            cwnd_peak = []
+            for c in self.cwnd:
+                local_max = np.r_[True, c[1:] >= c[:-1]] & np.r_[c[:-1] >= c[1:], True]
+                peak_list = [c for c, b in zip(c, local_max) if b]
+                peak_time = [t for t, b in zip(self.time, local_max) if b]
+                peak_series = np.interp(self.time, peak_time, peak_list)
+                cwnd_peak.append(peak_series)
+            self.cwnd_peak = np.array(cwnd_peak)
 
     def __read_setting_file(self, setting_file):
         sf = open(setting_file, 'r')
@@ -118,29 +121,43 @@ def train_weight(output_data, instruction_data, reg_coef=1e-8):
     #Wout = dot( dot(Yt,X.T), linalg.inv( dot(X,X.T)))
     return Wout
 
-def train_weight_and_reg_coef_search(experimant_data, reg_coefs=[10**(-i) for i in range(0,10)]):
-    reg_coef = 1e-2
+def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2.0, 0.1)):
     init_time = experimant_data.settings["init_time"]
     training_time = experimant_data.settings["training_time"]
     esn_dt = experimant_data.settings["esn_dt"]
     start_time_idx = int(init_time / esn_dt)
     end_time_idx = int(training_time / esn_dt)
 
-    use_peak = False
-    if use_peak:
+    if USE_PEAK:
         cwnd4training = experimant_data.cwnd_peak[:, start_time_idx:end_time_idx]
     else:
         cwnd4training = experimant_data.cwnd[:, start_time_idx:end_time_idx]
-
     target4training = experimant_data.target[start_time_idx:end_time_idx]
-    weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
-    if use_peak:
-        output = dot(weight, experimant_data.cwnd_peak)
-    else:
-        output = dot(weight, experimant_data.cwnd)
-    return weight, output, reg_coefs
-    # for rc in reg_coefs:
-    #     train_weight(experimant_data, instruction, rc)
+    target4validation = experimant_data.target[end_time_idx:]
+
+    search_result_mse = []
+    best_mse = 1000
+    best_weight = None
+    best_output = None
+    for reg_coef in reg_coefs:
+        weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
+        if USE_PEAK:
+            output = dot(weight, experimant_data.cwnd_peak)
+        else:
+            output = dot(weight, experimant_data.cwnd)
+        output4validation = output[end_time_idx:]
+        mse = sum(np.square(output4validation - target4validation)) / len(output4validation)
+        print_status("reg_coef: %12.10f  / MSE: %f" % (reg_coef, mse))
+
+        if best_mse > mse:
+            best_mse = mse
+            best_regcoef = reg_coef
+            best_output = output
+            best_weight = weight
+
+        search_result_mse.append(mse)
+
+    return best_mse, best_weight, best_output, best_regcoef, search_result_mse
 
 
 def print_status(msg):
@@ -161,44 +178,24 @@ if __name__ == '__main__':
     data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
 
     print_status("training wegihts...")
-    weight, output, reg_coef = train_weight_and_reg_coef_search(data)
-    # init_time = data.settings["init_time"]
-    # training_time = data.settings["training_time"]
-    # esn_dt = data.settings["esn_dt"]
-    # start_time_idx = int(init_time / esn_dt)
-    # end_time_idx = int(training_time / esn_dt)
-
-    # use_peak = False
-    # if use_peak:
-    #     cwnd4training = data.cwnd_peak[:, start_time_idx:end_time_idx]
-    # else:
-    #     cwnd4training = data.cwnd[:, start_time_idx:end_time_idx]
-
-    # target4training = data.target[start_time_idx:end_time_idx]
-    # weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
-    # if use_peak:
-    #     output = dot(weight, data.cwnd_peak)
-    # else:
-    #     output = dot(weight, data.cwnd)
+    reg_coefs = np.arange(0.1, 2.0, 0.1)
+    best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     print_status("saving result...")
-    # np.save(join(output_prefix, "time"), data.time)
-    # np.save(join(output_prefix, "cwnd"), data.cwnd)
-    # np.save(join(output_prefix, "cwnd_peak"), data.cwnd_peak)
-    # np.save(join(output_prefix, "weight"), weight)
-    # np.save(join(output_prefix, "target"), data.target)
-    # np.save(join(output_prefix, "input"), data.input)
-    # np.save(join(output_prefix, "output"), output)
-
     np.save((output_prefix + "time"), data.time)
     np.save((output_prefix + "cwnd"), data.cwnd)
-    np.save((output_prefix + "cwnd_peak"), data.cwnd_peak)
-    np.save((output_prefix + "weight"), weight)
+    if USE_PEAK:
+        np.save((output_prefix + "cwnd_peak"), data.cwnd_peak)
     np.save((output_prefix + "target"), data.target)
     np.save((output_prefix + "input"), data.input)
-    np.save((output_prefix + "output"), output)
 
-    data.settings["reg_coefficient"] = reg_coef
-    #setting_file = open(join(output_prefix, "settings.json"), "w")
+    np.save((output_prefix + "weight"), best_weight)
+    np.save((output_prefix + "output"), best_output)
+
+    np.save((output_prefix + "search_regcoef"), reg_coefs)
+    np.save((output_prefix + "search_mse"), search_result_mse)
+
+    data.settings["reg_coef"] = best_regcoef
+    data.settings["mse"] = best_mse
     setting_file = open((output_prefix + "settings.json"), "w")
     setting_file.write(json.dumps(data.settings))
