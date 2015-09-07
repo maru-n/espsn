@@ -139,6 +139,7 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
     best_mse = 1000
     best_weight = None
     best_output = None
+    best_regcoef = None
     for reg_coef in reg_coefs:
         weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
         if USE_PEAK:
