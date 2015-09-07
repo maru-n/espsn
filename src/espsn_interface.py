@@ -148,7 +148,7 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
             output = dot(weight, experimant_data.cwnd)
         output4validation = output[end_time_idx:]
         mse = sum(np.square(output4validation - target4validation)) / len(output4validation)
-        print_status("reg_coef: %12.10f  / MSE: %f" % (reg_coef, mse))
+        print_status("reg_coef: %f  / MSE: %f" % (reg_coef, mse))
 
         if best_mse > mse:
             best_mse = mse

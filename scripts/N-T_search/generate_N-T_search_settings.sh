@@ -14,7 +14,9 @@ do
 
     for T in `seq 200 200 1600`
     do
+        init=$INIT_TIME
         duration=`expr $T + $INIT_TIME + $EVAL_TIME`
+        training=`expr $T + $INIT_TIME`
         setting_file=`printf "N%02d-T%04d_settings.txt" $N $T`
         output_file=`printf "N%02d-T%04d" $N $T`
         echo "N:${N} T:${T}"
@@ -22,8 +24,8 @@ do
         -o $setting_file \
         -N $N \
         --duration $duration \
-        --init-time 100 \
-        --training-time $T \
+        --init-time $init \
+        --training-time $training \
         --one-signal-duration 1 \
         --random-seed 1234 \
         -t delay
