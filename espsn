@@ -1,12 +1,14 @@
 #! /bin/bash
 
 usage_exit() {
-        echo "Usage: $0 [-n] [-h] [-o ] setting.txt" 1>&2
+        echo "Usage: $0 [-p] [-e] [-h] [-o ] setting.txt" 1>&2
+        echo "    -p    only PSN" 1>&2
+        echo "    -e    only ESN" 1>&2
         exit 1
 }
 
 OUTPUT_FILENAME=out
-while getopts no:h OPT
+while getopts peo:h OPT
 do
     case $OPT in
         p) ONLY_PSN_FLAG=true

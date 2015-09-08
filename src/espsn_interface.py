@@ -43,12 +43,12 @@ class ESPSNExperimentData(object):
 
         # read cwnd output data from tcp file
         cwnd_cnt = N * N - N
-        self.cwnd = np.zeros((cwnd_cnt, time_cnt))
-        #TODO:
-        #cnt = np.ones((cwnd_cnt, time_cnt))
+
+        cwnd_tmp = np.zeros((cwnd_cnt, time_cnt))
+        #self.cwnd = np.zeros((cwnd_cnt, time_cnt))
 
         if splitext(tcp_cwnd_log_file)[1] == ".npy":
-            self.cwnd = np.load(tcp_cwnd_log_file)
+            cwnd_tmp = np.load(tcp_cwnd_log_file)
         else:
             #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
             for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
@@ -67,9 +67,16 @@ class ESPSNExperimentData(object):
                 time_idx = int(time / esn_dt)
 
                 if 0 <= time_idx:
-                    self.cwnd[idx, time_idx:] = float(cwnd)
-                    #self.cwnd[idx, time_idx:] += float(cwnd)
-                    #cnt[idx, time_idx:] += float(1)
+                    cwnd_tmp[idx, time_idx:] = float(cwnd)
+
+            print(cwnd_tmp.shape)
+            self.cwnd = []
+            for c in cwnd_tmp:
+                if np.any(c):
+                    self.cwnd.append(c)
+            self.cwnd = np.array(self.cwnd)
+            print(self.cwnd.shape)
+
 
         #self.cwnd = self.cwnd / cnt
 
@@ -95,6 +102,7 @@ class ESPSNExperimentData(object):
         link_bps = sf.readline().rstrip("\n").split(':')[1]
         link_delay = sf.readline().rstrip("\n").split(':')[1]
         link_queue = sf.readline().rstrip("\n").split(':')[1]
+        k = float(sf.readline().rstrip("\n").split(':')[1])
         init_time = float(sf.readline().rstrip("\n").split(':')[1])
         training_time = float(sf.readline().rstrip("\n").split(':')[1])
         esn_dt = float(sf.readline().rstrip("\n").split(':')[1])
@@ -102,6 +110,7 @@ class ESPSNExperimentData(object):
         sf.close()
         settings = {
             "N": N,
+            "k": k,
             "duration": duration,
             "link_bps": link_bps,
             "link_delay": link_delay,
@@ -179,7 +188,12 @@ if __name__ == '__main__':
     data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
 
     print_status("training wegihts...")
-    reg_coefs = np.arange(0.1, 2.0, 0.1)
+    #reg_coefs = np.arange(0.1, 2.0, 0.1)
+    #reg_coefs = np.arange(0.0, 5.0, 0.2)
+    #reg_coefs = [10**(i) for i in range(9)]
+    #reg_coefs = [10**(-6)]
+    #reg_coefs = np.arange(0.0, 10.0, 1.0)
+    reg_coefs = [1.0]
     best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     print_status("saving result...")

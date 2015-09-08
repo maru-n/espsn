@@ -38,6 +38,7 @@ set duration [lindex [split [gets $input_file] ":"] 1]
 set link_bps [lindex [split [gets $input_file] ":"] 1]
 set link_delay [lindex [split [gets $input_file] ":"] 1]
 set queue_limit [lindex [split [gets $input_file] ":"] 1]
+set k [lindex [split [gets $input_file] ":"] 1]
 
 #set duty_low [lindex [split [gets $input_file] ":"] 1]
 #set duty_high [lindex [split [gets $input_file] ":"] 1]
@@ -74,6 +75,7 @@ puts "N: $N"
 puts "Duration: $duration"
 puts "Input Channel Num: $input_ch_num"
 puts "Link: $link_bps, $link_delay, $queue_limit packets queue"
+puts "k: $k"
 puts "--------------------"
 
 
@@ -95,8 +97,8 @@ for {set i 0} {$i < $N} {incr i} {
   set node($i) [$ns node]
 }
 
-puts "\033\[32m\[PSN\]\033\[39m creating topology..."
-set networkfile [open $network_file_name w]
+puts "\033\[32m\[PSN\]\033\[39m creating link topology..."
+#set networkfile [open $network_file_name w]
 for {set i 0} {$i < $N-1} {incr i} {
   #------------------
   # 1-d grid
@@ -105,7 +107,7 @@ for {set i 0} {$i < $N-1} {incr i} {
   eval \$ns duplex-link \$node(\$i) \$node([expr \$i + 1]) $link_params
   $ns queue-limit $node($i) $node([expr $i + 1]) $queue_limit
   $ns queue-limit $node([expr $i + 1]) $node($i) $queue_limit
-  puts $networkfile [format "%d %d" $i [expr $i + 1]]
+  #puts $networkfile [format "%d %d" $i [expr $i + 1]]
 
   #------------------
   # random graph
@@ -120,54 +122,45 @@ for {set i 0} {$i < $N-1} {incr i} {
   #   }
   # }
 }
-close $networkfile
+#close $networkfile
+eval \$ns duplex-link \$node(0) \$node([expr \$N - 1]) $link_params
+$ns queue-limit $node(0) $node([expr $N - 1]) $queue_limit
+$ns queue-limit $node([expr $N - 1]) $node(0) $queue_limit
+
+#set k 6.0
+set p [expr $k / ($N -1)]
+puts $p
 
 puts "\033\[32m\[PSN\]\033\[39m creating flows..."
 for {set i 0} {$i < $N} {incr i} {
   for {set j 0} {$j < $N} {incr j} {
     if { $i == $j } {continue}
-    set flow_id [expr $i * $N + $j]
-    set input_ch [expr $i / ($N / $input_ch_num)]
-    # puts [format "  flow: node(%d) -> node(%d) input(%d)" $i $j $input_ch]
-    set tcp [new Agent/TCP/Newreno]
-    set sink [new Agent/TCPSink]
-    $tcp trace cwnd_
-    $tcp attach-trace $tcpfile
-    $ns attach-agent $node($i) $tcp
-    $ns attach-agent $node($j) $sink
-    $ns connect $tcp $sink
-    $tcp set fid_ $flow_id
-    $ns color 0 blue
 
-    #------------------
-    # periodic
-    #------------------
-    #set flow [new Application/PeriodicFTP $cycle $duty]
-    #$flow attach-agent $tcp
-    #$ns at 0.0 "$flow run"
+    if { [expr rand()] < $p } {
+      set flow_id [expr $i * $N + $j]
+      # TODO:
+      #set input_ch [expr $i / ($N / $input_ch_num)]
+      set input_ch 0
 
-    #------------------
-    # Use duty rate
-    #------------------
-    # set flow [new Application/InputFlowDuty $input($input_ch)]
-    # $flow attach-agent $tcp
-    # $ns at 0.0 "$flow run"
+      set tcp [new Agent/TCP/Newreno]
+      set sink [new Agent/TCPSink]
+      $tcp trace cwnd_
+      $tcp attach-trace $tcpfile
+      $ns attach-agent $node($i) $tcp
+      $ns attach-agent $node($j) $sink
+      $ns connect $tcp $sink
+      $tcp set fid_ $flow_id
+      #$ns color 0 blue
 
-    #------------------
-    # Normal
-    #------------------
-    # set flow [new Application/InputFlow $input($input_ch)]
-    # $flow attach-agent $tcp
-
-    #------------------
-    # Reversed input
-    #------------------
-    if { ($i - $j) % 2 == 0 } {
-      set flow [new Application/InputFlowReverse $input($input_ch)]
-    } else {
-      set flow [new Application/InputFlow $input($input_ch)]
+      if { 0.5 < [expr rand()] } {
+        set flow [new Application/InputFlowReverse $input($input_ch)]
+        puts [format "  flow: node(%d) -> node(%d) +input(%d)" $i $j $input_ch]
+      } else {
+        set flow [new Application/InputFlow $input($input_ch)]
+        puts [format "  flow: node(%d) -> node(%d) -input(%d)" $i $j $input_ch]
+      }
+      $flow attach-agent $tcp
     }
-    $flow attach-agent $tcp
   }
 }
 

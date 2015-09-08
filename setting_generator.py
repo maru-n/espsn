@@ -5,6 +5,7 @@ import numpy as np
 
 def generate_settings(type, N=10, duration=200,
                       one_signal_duration=4.,
+                      k=6.,
                       esn_init_time=4,
                       esn_training_time=100,
                       esn_dt=0.1):
@@ -18,6 +19,7 @@ def generate_settings(type, N=10, duration=200,
     setting_str += ("link_queue:10\n")
     #setting_str += ("duty_low:%f\n")
     #setting_str += ("duty_high:%f\n")
+    setting_str += ("k:%f\n" % k)
     setting_str += ("esn_init_time:%f\n" % esn_init_time)
     setting_str += ("esn_training_time:%f\n" % esn_training_time)
     setting_str += ("esn_dt:%f\n" % esn_dt)
@@ -105,6 +107,11 @@ if __name__ == '__main__':
                       type="int",
                       default=10,
                       help="node num")
+    parser.add_option("-k",
+                      dest="k",
+                      type="int",
+                      default=6,
+                      help="k")
     parser.add_option("--random-seed",
                       dest="random_seed",
                       type="int",
@@ -139,6 +146,7 @@ if __name__ == '__main__':
                                  N=opts.N,
                                  duration=opts.duration,
                                  one_signal_duration=opts.one_signal_duration,
+                                 k=opts.k,
                                  esn_init_time=opts.init_time,
                                  esn_training_time=opts.training_time,
                                  esn_dt=0.1)
