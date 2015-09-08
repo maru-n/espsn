@@ -9,7 +9,9 @@ OUTPUT_FILENAME=out
 while getopts no:h OPT
 do
     case $OPT in
-        n) NO_ESN_CALC_FLAG=true
+        p) ONLY_PSN_FLAG=true
+            ;;
+        e) ONLY_ESN_FLAG=true
             ;;
         o)  OUTPUT_FILENAME=$OPTARG
             ;;
@@ -32,10 +34,12 @@ SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
 WORKING_DIR=`dirname $SETTING_FILE`
 
 cd $SRC_DIR
-NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}"
-eval $NS2_CMD
+if [ ! $ONLY_ESN_FLAG ] ; then
+    NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}"
+    eval $NS2_CMD
+fi
 
-if [ ! $NO_ESN_CALC_FLAG ] ; then
+if [ ! $ONLY_PSN_FLAT ] ; then
     ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}.tcp ${WORKING_DIR}/${OUTPUT_FILENAME}"
     eval $ESPSN_CMD
 fi
