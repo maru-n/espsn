@@ -1,5 +1,5 @@
 SETTING_GENERATOR="../../setting_generator.py"
-WORK_DIR="~/espsn/scripts/N-T_search"
+WORK_DIR="~/espsn/scripts/k_search"
 ESPSN="./espsn"
 
 INIT_TIME=10
