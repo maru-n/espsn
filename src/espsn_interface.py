@@ -192,8 +192,8 @@ if __name__ == '__main__':
     #reg_coefs = np.arange(0.0, 5.0, 0.2)
     #reg_coefs = [10**(i) for i in range(9)]
     #reg_coefs = [10**(-6)]
-    #reg_coefs = np.arange(0.0, 10.0, 1.0)
-    reg_coefs = [1.0]
+    reg_coefs = np.arange(0.0, 10.0, 1.0)
+    #reg_coefs = [1.0]
     best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     print_status("saving result...")

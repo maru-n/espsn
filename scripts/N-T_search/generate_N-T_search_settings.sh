@@ -5,14 +5,14 @@ ESPSN="./espsn"
 INIT_TIME=10
 EVAL_TIME=100
 
-for N in `seq 8 8 64`
+for N in `seq 8 16 64`
 do
     qsub_script=`printf "N%02d_qsub-run.sh" $N`
     echo "#!/bin/sh" > $qsub_script
     echo "#PBS -l walltime=60:00:00" >> $qsub_script
-    echo "cd ${WORK_DIR}" >> $qsub_script
+    #echo "cd ${WORK_DIR}" >> $qsub_script
 
-    for T in `seq 200 200 1600`
+    for T in `seq 200 400 1600`
     do
         init=$INIT_TIME
         duration=`expr $T + $INIT_TIME + $EVAL_TIME`

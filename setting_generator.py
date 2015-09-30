@@ -110,7 +110,7 @@ if __name__ == '__main__':
     parser.add_option("-k",
                       dest="k",
                       type="int",
-                      default=6,
+                      default=4,
                       help="k")
     parser.add_option("--random-seed",
                       dest="random_seed",
