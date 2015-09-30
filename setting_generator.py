@@ -9,7 +9,6 @@ def generate_settings(type, N=10, duration=200,
                       esn_init_time=4,
                       esn_training_time=100,
                       esn_dt=0.1):
-
     setting_str = ""
 
     setting_str += ("N:%d\n" % N)
@@ -17,72 +16,82 @@ def generate_settings(type, N=10, duration=200,
     setting_str += ("link_bps:10Mb\n")
     setting_str += ("link_delay:10ms\n")
     setting_str += ("link_queue:10\n")
-    #setting_str += ("duty_low:%f\n")
-    #setting_str += ("duty_high:%f\n")
     setting_str += ("k:%f\n" % k)
     setting_str += ("esn_init_time:%f\n" % esn_init_time)
     setting_str += ("esn_training_time:%f\n" % esn_training_time)
     setting_str += ("esn_dt:%f\n" % esn_dt)
 
     if type == 'xor':
-        setting_str += ("input:2\n")
-        setting_str += ("\n")
-
-        step_num = int(duration/one_signal_duration)
-
-        in1 = [np.random.randint(0, 2) for i in range(step_num)]
-        in2 = [np.random.randint(0, 2) for i in range(step_num)]
-
-        for i in range(step_num):
-            time = float(i * one_signal_duration)
-
-            # network condition is not changed
-            if i != 0 and in1[i] == in1[i-1] and in2[i] == in2[i-1]:
-                continue
-
-            if (in1[i] == 1 and in2[i] == 1) or (in1[i] == 0 and in2[i] == 0):
-                target = 0
-            else:
-                target = 1
-            setting_str += ("%f %d %d %d\n" % (time, in1[i], in2[i], target))
+        setting_str += ("input:2\n\n")
+        setting_str += generate_xor_timeseries(duration, one_signal_duration)
 
     elif type == 'parity':
-        setting_str += "input:1\n"
-        setting_str += "\n"
-
-        step_num = int(duration/one_signal_duration)
-
-        in1 = [np.random.randint(0, 2) for i in range(step_num)]
-
-        current_parity = True
-        for i in range(step_num):
-            time = float(i * one_signal_duration)
-
-            if in1[i] == 1:
-                current_parity = not current_parity
-
-            # network condition is not changed
-            if i != 0 and in1[i] == in1[i-1] == 0:
-                continue
-
-            target = 1 if current_parity else 0
-            setting_str += ("%f %d %d\n" % (time, in1[i], target))
+        setting_str += "input:1\n\n"
+        setting_str += generate_parity_timeseries(duration, one_signal_duration)
 
     elif type == 'delay':
-        setting_str += "input:1\n"
-        setting_str += "\n"
-
-        step_num = int(duration/one_signal_duration)
-
-        in1 = [np.random.randint(0, 2) for i in range(step_num)]
-
-        current_parity = True
-        for i in range(step_num):
-            time = float(i * one_signal_duration)
-            target = in1[i-1]
-            setting_str += ("%f %d %d\n" % (time, in1[i], target))
+        setting_str += "input:1\n\n"
+        setting_str += generate_delay_timeseries(duration, one_signal_duration)
 
     return setting_str
+
+
+def generate_xor_timeseries(duration, one_signal_duration):
+    result = ""
+    step_num = int(duration/one_signal_duration)
+
+    in1 = [np.random.randint(0, 2) for i in range(step_num)]
+    in2 = [np.random.randint(0, 2) for i in range(step_num)]
+
+    for i in range(step_num):
+        time = float(i * one_signal_duration)
+
+        # network condition is not changed
+        if i != 0 and in1[i] == in1[i-1] and in2[i] == in2[i-1]:
+            continue
+
+        if (in1[i] == 1 and in2[i] == 1) or (in1[i] == 0 and in2[i] == 0):
+            target = 0
+        else:
+            target = 1
+        result += ("%f %d %d %d\n" % (time, in1[i], in2[i], target))
+    return result
+
+
+def generate_parity_timeseries(duration, one_signal_duration):
+    result = ""
+    step_num = int(duration/one_signal_duration)
+
+    in1 = [np.random.randint(0, 2) for i in range(step_num)]
+
+    current_parity = True
+    for i in range(step_num):
+        time = float(i * one_signal_duration)
+
+        if in1[i] == 1:
+            current_parity = not current_parity
+
+        # network condition is not changed
+        if i != 0 and in1[i] == in1[i-1] == 0:
+            continue
+
+        target = 1 if current_parity else 0
+        result += ("%f %d %d\n" % (time, in1[i], target))
+    return result
+
+
+def generate_delay_timeseries(duration, one_signal_duration):
+    result = ""
+    step_num = int(duration/one_signal_duration)
+
+    in1 = [np.random.randint(0, 2) for i in range(step_num)]
+
+    current_parity = True
+    for i in range(step_num):
+        time = float(i * one_signal_duration)
+        target = in1[i-1]
+        result += ("%f %d %d\n" % (time, in1[i], target))
+    return result
 
 
 from optparse import OptionParser
