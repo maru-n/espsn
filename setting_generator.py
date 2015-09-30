@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_option("-o",
                       dest="output_filename",
                       type="string",
-                      default="settings.txt",
+                      default="setting.txt",
                       help="write output to FILE",
                       metavar="FILE")
     parser.add_option("-t",
