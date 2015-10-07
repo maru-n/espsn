@@ -69,13 +69,11 @@ class ESPSNExperimentData(object):
                 if 0 <= time_idx:
                     cwnd_tmp[idx, time_idx:] = float(cwnd)
 
-            print(cwnd_tmp.shape)
             self.cwnd = []
             for c in cwnd_tmp:
                 if np.any(c):
                     self.cwnd.append(c)
             self.cwnd = np.array(self.cwnd)
-            print(self.cwnd.shape)
 
 
         #self.cwnd = self.cwnd / cnt

@@ -129,7 +129,6 @@ $ns queue-limit $node([expr $N - 1]) $node(0) $queue_limit
 
 #set k 6.0
 set p [expr $k / ($N -1)]
-puts $p
 
 puts "\033\[32m\[PSN\]\033\[39m creating flows..."
 for {set i 0} {$i < $N} {incr i} {
@@ -154,10 +153,10 @@ for {set i 0} {$i < $N} {incr i} {
 
       if { 0.5 < [expr rand()] } {
         set flow [new Application/InputFlowReverse $input($input_ch)]
-        puts [format "  flow: node(%d) -> node(%d) +input(%d)" $i $j $input_ch]
+        #puts [format "  flow: node(%d) -> node(%d) +input(%d)" $i $j $input_ch]
       } else {
         set flow [new Application/InputFlow $input($input_ch)]
-        puts [format "  flow: node(%d) -> node(%d) -input(%d)" $i $j $input_ch]
+        #puts [format "  flow: node(%d) -> node(%d) -input(%d)" $i $j $input_ch]
       }
       $flow attach-agent $tcp
     }
