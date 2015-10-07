@@ -155,7 +155,7 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
             output = dot(weight, experimant_data.cwnd)
         output4validation = output[end_time_idx:]
         mse = sum(np.square(output4validation - target4validation)) / len(output4validation)
-        print_status("reg_coef: %f  / MSE: %f" % (reg_coef, mse))
+        print_status("reg_coef: %f  / MSE: %f" % (reg_coef, mse), header="       ")
 
         if best_mse > mse:
             best_mse = mse
@@ -168,8 +168,8 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
     return best_mse, best_weight, best_output, best_regcoef, search_result_mse
 
 
-def print_status(msg):
-    print("\033[34m[ESN]\033[39m " + msg)
+def print_status(msg, header="[ESN]"):
+    print("\033[34m" + header + "\033[39m " + msg)
 
 
 if __name__ == '__main__':
@@ -177,38 +177,42 @@ if __name__ == '__main__':
         print("espsn_interface.py SETTING_FILE {TCP_LOG_FILE|CWND_NPY_FILE} [OUTPUT_PREFIX]")
 
     if len(sys.argv) >= 4:
-        output_prefix = sys.argv[3]
+        output_filename = sys.argv[3]
     else:
-        output_prefix = "./out"
-    output_prefix = output_prefix + "."
+        output_filename = "./out"
 
     print_status("reading settings and data...")
     data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
 
     print_status("training wegihts...")
-    #reg_coefs = np.arange(0.1, 2.0, 0.1)
-    #reg_coefs = np.arange(0.0, 5.0, 0.2)
-    #reg_coefs = [10**(i) for i in range(9)]
-    #reg_coefs = [10**(-6)]
     reg_coefs = np.arange(0.0, 10.0, 1.0)
-    #reg_coefs = [1.0]
+
     best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     print_status("saving result...")
-    np.save((output_prefix + "time"), data.time)
-    np.save((output_prefix + "cwnd"), data.cwnd)
     if USE_PEAK:
-        np.save((output_prefix + "cwnd_peak"), data.cwnd_peak)
-    np.save((output_prefix + "target"), data.target)
-    np.save((output_prefix + "input"), data.input)
-
-    np.save((output_prefix + "weight"), best_weight)
-    np.save((output_prefix + "output"), best_output)
-
-    np.save((output_prefix + "search_regcoef"), reg_coefs)
-    np.save((output_prefix + "search_mse"), search_result_mse)
-
-    data.settings["reg_coef"] = best_regcoef
-    data.settings["mse"] = best_mse
-    setting_file = open((output_prefix + "settings.json"), "w")
-    setting_file.write(json.dumps(data.settings))
+        # Not implemented now!
+        pass
+    else:
+        np.savez(output_filename,
+                 time = data.time,
+                 cwnd = data.cwnd,
+                 target = data.target,
+                 input = data.input,
+                 weight = best_weight,
+                 output = best_output,
+                 reg_coef = best_regcoef,
+                 mse = best_mse,
+                 search_regcoef = reg_coefs,
+                 search_mse = search_result_mse,
+                 N = data.settings['N'],
+                 k = data.settings['k'],
+                 duration = data.settings['duration'],
+                 link_bps = data.settings['link_bps'],
+                 link_delay = data.settings['link_delay'],
+                 link_queue = data.settings['link_queue'],
+                 init_time = data.settings['init_time'],
+                 training_time = data.settings['training_time'],
+                 esn_dt = data.settings['esn_dt'],
+                 input_num = data.settings['input_num']
+                 )
