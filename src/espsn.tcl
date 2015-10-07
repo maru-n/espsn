@@ -164,4 +164,7 @@ for {set i 0} {$i < $N} {incr i} {
 }
 
 puts "\033\[32m\[PSN\]\033\[39m simulation..."
+for {set i 0} {$i <= $duration} {incr i 100} {
+  $ns at $i "puts $i"
+}
 $ns run
