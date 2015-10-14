@@ -2,6 +2,7 @@
 
 usage_exit() {
         echo "Usage: $0 [-p] [-e] [-h] [-o ] setting.txt" 1>&2
+        echo "    -o OUTPUT_FILENAME" 1>&2
         echo "    -p    only PSN" 1>&2
         echo "    -e    only ESN" 1>&2
         exit 1
@@ -45,4 +46,3 @@ if [ ! $ONLY_PSN_FLAT ] ; then
     ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}.tcp ${WORKING_DIR}/${OUTPUT_FILENAME}"
     eval $ESPSN_CMD
 fi
-

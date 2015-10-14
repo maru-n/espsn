@@ -88,7 +88,7 @@ $ns at $duration "exit 0"
 #set namfile [open $nam_file_name w]
 #$ns namtrace-all $namfile
 set tcpfile [open $tcp_file_name w]
-Agent/TCP set trace_all_oneline_ true
+#Agent/TCP set trace_all_oneline_ true
 
 puts "\033\[32m\[PSN\]\033\[39m creating nodes..."
 # $ns_node(0:N) node (TCP client or server)
