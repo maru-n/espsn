@@ -32,19 +32,39 @@ def generate_settings(type, N=10, duration=200,
         setting_str += generate_delay_timeseries(duration, one_signal_duration)
     elif type == 'sin':
         setting_str += "input:1\n\n"
-        setting_str += generage_sin_timeseries(duration, one_signal_duration)
+        setting_str += generate_sin_timeseries(duration, one_signal_duration)
+    elif type == "mg":
+        setting_str += "input:1\n\n"
+        setting_str += generate_mackey_glass_timeseries(duration, one_signal_duration)
 
     return setting_str
 
 
-def generage_sin_timeseries(duration, one_signal_duration):
+#from scipy.integrate import ode
+
+def generate_mackey_glass_timeseries(duration, one_signal_duration):
+    result = ""
+    step_num = int(duration/one_signal_duration)
+    x = np.loadtxt("MackeyGlass_t17.txt")
+    for i in range(step_num):
+        time = float(i * one_signal_duration)
+        target = x[i] + 0.6
+        signal_dt = one_signal_duration * target
+        result += ("%f 1 %f\n" % (time, target))
+        result += ("%f 0 %f\n" % (time+signal_dt, target))
+    return result
+
+
+def generate_sin_timeseries(duration, one_signal_duration):
     result = ""
     step_num = int(duration/one_signal_duration)
 
     for i in range(step_num):
         time = float(i * one_signal_duration)
-        target = np.sin(time/10)*0.5 + 0.5
-        dt = target*one_signal_duration
+        th = (time/30) % (2.0*np.pi)
+        target = np.sin(th)*0.5 + 0.5
+        dt = one_signal_duration * target
+        #dt = one_signal_duration * th / (2.0*np.pi)
 
         result += ("%f 1 %f\n" % (time, target))
         result += ("%f 0 %f\n" % (time+dt, target))
@@ -122,10 +142,10 @@ if __name__ == '__main__':
     parser.add_option("-t",
                       "--type",
                       dest="type",
-                      choices=["xor", "parity", "delay", "sin"],
+                      choices=["xor", "parity", "delay", "sin", "mg"],
                       type="choice",
                       default="xor",
-                      help="time series type [xor|parity|delay|sin]")
+                      help="time series type [xor|parity|delay|sin|mg]")
     parser.add_option("-N",
                       dest="N",
                       type="int",

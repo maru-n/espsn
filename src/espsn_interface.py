@@ -196,8 +196,30 @@ if __name__ == '__main__':
 
     print_status("saving result...")
     if USE_PEAK:
-        # Not implemented now!
-        pass
+        np.savez(output_filename,
+                 time = data.time,
+                 #cwnd = data.cwnd,
+                 cwnd = data.cwnd_peak,
+                 target = data.target,
+                 input = data.input,
+                 weight = best_weight,
+                 output = best_output,
+                 reg_coef = best_regcoef,
+                 mse = best_mse,
+                 search_regcoef = reg_coefs,
+                 search_mse = search_result_mse,
+                 N = data.settings['N'],
+                 k = data.settings['k'],
+                 duration = data.settings['duration'],
+                 link_bps = data.settings['link_bps'],
+                 link_delay = data.settings['link_delay'],
+                 link_queue = data.settings['link_queue'],
+                 init_time = data.settings['init_time'],
+                 training_time = data.settings['training_time'],
+                 esn_dt = data.settings['esn_dt'],
+                 input_num = data.settings['input_num'],
+                 USE_PEAK = USE_PEAK
+                 )
     else:
         np.savez(output_filename,
                  time = data.time,
@@ -219,5 +241,6 @@ if __name__ == '__main__':
                  init_time = data.settings['init_time'],
                  training_time = data.settings['training_time'],
                  esn_dt = data.settings['esn_dt'],
-                 input_num = data.settings['input_num']
+                 input_num = data.settings['input_num'],
+                 USE_PEAK = USE_PEAK
                  )
