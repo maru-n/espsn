@@ -37,7 +37,8 @@ class ESPSNExperimentData(object):
         for d in np.loadtxt(setting_file, skiprows=10):
             time = float(d[0])
             time_idx = int(time / esn_dt)
-            self.target[time_idx:] = int(d[-1])
+            #self.target[time_idx:] = int(d[-1])
+            self.target[time_idx:] = d[-1]
             for i in range(input_num):
                 self.input[i][time_idx:] = int(d[i+1])
 
@@ -51,11 +52,15 @@ class ESPSNExperimentData(object):
             cwnd_tmp = np.load(tcp_cwnd_log_file)
         else:
             #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
+            print_time = 0
             for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
                 src = int(d[1])
                 dst = int(d[2])
                 time = float(d[0])
                 cwnd = float(d[3])
+                if print_time < time:
+                    print_status("time: %f" % print_time, header="       ")
+                    print_time += 100
                 if src == dst or not(0 <= src < N) or not(0 <= dst < N):
                     continue
                 idx = src * N + dst
