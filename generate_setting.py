@@ -8,14 +8,17 @@ def generate_settings(type, N=10, duration=200,
                       k=6.,
                       esn_init_time=4,
                       esn_training_time=100,
-                      esn_dt=0.1):
+                      esn_dt=0.1,
+                      data_delay=0):
     setting_str = ""
 
     setting_str += ("N:%d\n" % N)
     setting_str += ("duration:%d\n" % duration)
     setting_str += ("link_bps:10Mb\n")
-    setting_str += ("link_delay:10ms\n")
-    setting_str += ("link_queue:10\n")
+    #setting_str += ("link_delay:10ms\n")
+    setting_str += ("link_delay:30ms\n")
+    #setting_str += ("link_queue:10\n")
+    setting_str += ("link_queue:3\n")
     setting_str += ("k:%f\n" % k)
     setting_str += ("esn_init_time:%f\n" % esn_init_time)
     setting_str += ("esn_training_time:%f\n" % esn_training_time)
@@ -35,23 +38,24 @@ def generate_settings(type, N=10, duration=200,
         setting_str += generate_sin_timeseries(duration, one_signal_duration)
     elif type == "mg":
         setting_str += "input:1\n\n"
-        setting_str += generate_mackey_glass_timeseries(duration, one_signal_duration)
+        setting_str += generate_mackey_glass_timeseries(duration, one_signal_duration, dt=data_delay)
 
     return setting_str
 
 
 #from scipy.integrate import ode
 
-def generate_mackey_glass_timeseries(duration, one_signal_duration):
+def generate_mackey_glass_timeseries(duration, one_signal_duration, dt=0):
     result = ""
     step_num = int(duration/one_signal_duration)
     x = np.loadtxt("MackeyGlass_t17.txt")
     for i in range(step_num):
         time = float(i * one_signal_duration)
-        target = x[i] + 0.6
-        signal_dt = one_signal_duration * target
-        result += ("%f 1 %f\n" % (time, target))
-        result += ("%f 0 %f\n" % (time+signal_dt, target))
+        input_val = x[i] + 0.6
+        target_val = x[i+dt] + 0.6
+        signal_dt = one_signal_duration * input_val
+        result += ("%f 1 %f %f\n" % (time, input_val, target_val))
+        result += ("%f 0 %f %f\n" % (time+signal_dt, input_val, target_val))
     return result
 
 
@@ -153,8 +157,8 @@ if __name__ == '__main__':
                       help="node num")
     parser.add_option("-k",
                       dest="k",
-                      type="int",
-                      default=4,
+                      type="float",
+                      default=4.0,
                       help="k")
     parser.add_option("--random-seed",
                       dest="random_seed",
@@ -181,6 +185,11 @@ if __name__ == '__main__':
                       type="float",
                       default=4.0,
                       help="duration of a 0/1 signal")
+    parser.add_option("--data-delay",
+                      dest="data_delay",
+                      type="int",
+                      default=0,
+                      help="data delay (continuous value only)")
 
     (opts, args) = parser.parse_args()
 
@@ -193,7 +202,8 @@ if __name__ == '__main__':
                                  k=opts.k,
                                  esn_init_time=opts.init_time,
                                  esn_training_time=opts.training_time,
-                                 esn_dt=0.1)
+                                 esn_dt=0.1,
+                                 data_delay=opts.data_delay)
 
     if opts.output_filename:
         output = open(opts.output_filename, 'w')

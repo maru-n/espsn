@@ -7,10 +7,11 @@ from numpy.linalg import inv
 import sys
 import json
 from os.path import join, splitext
+from scipy.signal import argrelmax
 import pdb
 
 
-USE_PEAK = False
+#USE_PEAK = False
 
 #
 # t ----------------------------------------->
@@ -33,10 +34,13 @@ class ESPSNExperimentData(object):
 
         # read target signale and input signals from setting file
         self.target = np.zeros(time_cnt)
+        self.input_raw = []
         self.input = [np.zeros(time_cnt) for i in range(input_num)]
         for d in np.loadtxt(setting_file, skiprows=10):
             time = float(d[0])
             time_idx = int(time / esn_dt)
+            input_raw = d[-2]
+            self.input_raw.append((time, input_raw))
             #self.target[time_idx:] = int(d[-1])
             self.target[time_idx:] = d[-1]
             for i in range(input_num):
@@ -51,6 +55,46 @@ class ESPSNExperimentData(object):
         if splitext(tcp_cwnd_log_file)[1] == ".npy":
             cwnd_tmp = np.load(tcp_cwnd_log_file)
         else:
+            cwnd_raw_matrix = [[[] for j in range(N)] for i in range(N)]
+            print_time = 0
+            #for d in pd.read_csv(tcp_cwnd_log_file, sep=' ', header=None):
+            #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
+                # src = int(d[1])
+                # dst = int(d[2])
+                # time = float(d[0])
+                # cwnd = float(d[3])
+            for l in open(tcp_cwnd_log_file):
+                d = l.split()
+                src = int(d[1])
+                dst = int(d[3])
+                time = float(d[0])
+                cwnd = float(d[6])
+                cwnd_raw_matrix[src][dst].append((time, cwnd))
+                if print_time < time:
+                    print_status("time: %f" % print_time, header="")
+                    print_time += 200
+            self.cwnd = []
+            self.cwnd_raw = []
+            self.cwnd_src_dst = []
+            #self.cwnd_raw = []
+            for i in range(N):
+                for j in range(N):
+                    c = np.array(cwnd_raw_matrix[i][j])
+                    if not np.any(c):
+                        continue
+                    peak_idx = argrelmax(c[:, 1])
+                    time = c[peak_idx, 0][0,:]
+                    cwnd = c[peak_idx, 1][0,:]
+                    self.cwnd.append( np.interp(self.time, time, cwnd))
+                    self.cwnd_raw.append(c)
+                    self.cwnd_src_dst.append((i,j))
+                    #self.cwnd_raw.append()
+                    #peak_series = np.interp(self.time, peak_time, peak_list)
+                    #cwnd_raw[i][j] =
+            self.cwnd = np.array(self.cwnd)
+
+
+            """
             print_time = 0
             for d in np.loadtxt(tcp_cwnd_log_file, usecols=(0, 1, 3, 6)):
             #for d in np.loadtxt(tcp_cwnd_log_file, usecols=(1, 3, 7, 17)):
@@ -79,7 +123,7 @@ class ESPSNExperimentData(object):
                 if np.any(c):
                     self.cwnd.append(c)
             self.cwnd = np.array(self.cwnd)
-
+            """
 
         #self.cwnd = self.cwnd / cnt
 
@@ -87,7 +131,7 @@ class ESPSNExperimentData(object):
         dmin = self.cwnd.min()
         norm_cwnd = (self.cwnd-dmin).astype(float) / (dmax-dmin).astype(float)
         self.cwnd = norm_cwnd
-
+        """
         if USE_PEAK:
             cwnd_peak = []
             for c in self.cwnd:
@@ -97,6 +141,7 @@ class ESPSNExperimentData(object):
                 peak_series = np.interp(self.time, peak_time, peak_list)
                 cwnd_peak.append(peak_series)
             self.cwnd_peak = np.array(cwnd_peak)
+        """
 
     def __read_setting_file(self, setting_file):
         sf = open(setting_file, 'r')
@@ -140,10 +185,7 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
     start_time_idx = int(init_time / esn_dt)
     end_time_idx = int(training_time / esn_dt)
 
-    if USE_PEAK:
-        cwnd4training = experimant_data.cwnd_peak[:, start_time_idx:end_time_idx]
-    else:
-        cwnd4training = experimant_data.cwnd[:, start_time_idx:end_time_idx]
+    cwnd4training = experimant_data.cwnd[:, start_time_idx:end_time_idx]
     target4training = experimant_data.target[start_time_idx:end_time_idx]
     target4validation = experimant_data.target[end_time_idx:]
 
@@ -154,13 +196,10 @@ def train_weight_and_reg_coef_search(experimant_data, reg_coefs=np.arange(0.1, 2
     best_regcoef = None
     for reg_coef in reg_coefs:
         weight = train_weight(cwnd4training, target4training, reg_coef=reg_coef)
-        if USE_PEAK:
-            output = dot(weight, experimant_data.cwnd_peak)
-        else:
-            output = dot(weight, experimant_data.cwnd)
+        output = dot(weight, experimant_data.cwnd)
         output4validation = output[end_time_idx:]
         mse = sum(np.square(output4validation - target4validation)) / len(output4validation)
-        print_status("reg_coef: %f  / MSE: %f" % (reg_coef, mse), header="       ")
+        print_status("reg_coef: %f  / MSE: %f" % (reg_coef, mse), header="")
 
         if best_mse > mse:
             best_mse = mse
@@ -195,52 +234,28 @@ if __name__ == '__main__':
     best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     print_status("saving result...")
-    if USE_PEAK:
-        np.savez(output_filename,
-                 time = data.time,
-                 #cwnd = data.cwnd,
-                 cwnd = data.cwnd_peak,
-                 target = data.target,
-                 input = data.input,
-                 weight = best_weight,
-                 output = best_output,
-                 reg_coef = best_regcoef,
-                 mse = best_mse,
-                 search_regcoef = reg_coefs,
-                 search_mse = search_result_mse,
-                 N = data.settings['N'],
-                 k = data.settings['k'],
-                 duration = data.settings['duration'],
-                 link_bps = data.settings['link_bps'],
-                 link_delay = data.settings['link_delay'],
-                 link_queue = data.settings['link_queue'],
-                 init_time = data.settings['init_time'],
-                 training_time = data.settings['training_time'],
-                 esn_dt = data.settings['esn_dt'],
-                 input_num = data.settings['input_num'],
-                 USE_PEAK = USE_PEAK
-                 )
-    else:
-        np.savez(output_filename,
-                 time = data.time,
-                 cwnd = data.cwnd,
-                 target = data.target,
-                 input = data.input,
-                 weight = best_weight,
-                 output = best_output,
-                 reg_coef = best_regcoef,
-                 mse = best_mse,
-                 search_regcoef = reg_coefs,
-                 search_mse = search_result_mse,
-                 N = data.settings['N'],
-                 k = data.settings['k'],
-                 duration = data.settings['duration'],
-                 link_bps = data.settings['link_bps'],
-                 link_delay = data.settings['link_delay'],
-                 link_queue = data.settings['link_queue'],
-                 init_time = data.settings['init_time'],
-                 training_time = data.settings['training_time'],
-                 esn_dt = data.settings['esn_dt'],
-                 input_num = data.settings['input_num'],
-                 USE_PEAK = USE_PEAK
-                 )
+    np.savez(output_filename,
+             time = data.time,
+             cwnd = data.cwnd,
+             cwnd_raw = data.cwnd_raw,
+             cwnd_src_dst = data.cwnd_src_dst,
+             target = data.target,
+             input = data.input,
+             input_raw = data.input_raw,
+             weight = best_weight,
+             output = best_output,
+             reg_coef = best_regcoef,
+             mse = best_mse,
+             search_regcoef = reg_coefs,
+             search_mse = search_result_mse,
+             N = data.settings['N'],
+             k = data.settings['k'],
+             duration = data.settings['duration'],
+             link_bps = data.settings['link_bps'],
+             link_delay = data.settings['link_delay'],
+             link_queue = data.settings['link_queue'],
+             init_time = data.settings['init_time'],
+             training_time = data.settings['training_time'],
+             esn_dt = data.settings['esn_dt'],
+             input_num = data.settings['input_num'],
+             )
