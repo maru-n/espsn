@@ -2,6 +2,12 @@ source "application.tcl"
 
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
+if {[llength $argv] == 3} {
+    set is_generative 1
+    set espsn_experiment_data [lindex $argv 1]
+} else {
+    set is_generative 0
+}
 
 set input_file [open $input_file_name]
 
@@ -112,7 +118,7 @@ foreach flow_setting $topology {
     $tcp set fid_ $flow_id
     set flow_id [expr $flow_id + 1]
 
-    if { $pos_neg == 0 } {
+    if { $pos_neg == 1 } {
         set flow [new Application/InputFlow $input($input_ch)]
     } else {
         set flow [new Application/InputFlowReverse $input($input_ch)]

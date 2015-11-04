@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-from numpy.random import random, randint
+import random
 
 def generate_settings(type, N=10, duration=200,
                       one_signal_duration=4.,
@@ -29,7 +29,7 @@ def generate_settings(type, N=10, duration=200,
         channel_num = 1
     setting_str += "input:%d\n" % channel_num
 
-    # Topology  [src] [dst] [input_channel] [positive/negative]
+    # Topology  [src] [dst] [input_channel] [positive(1)/negative(-1)]
     setting_str += "\n"
     setting_str += generate_topology_setting(N, k, channel_num)
 
@@ -54,8 +54,8 @@ def generate_topology_setting(N, k, channel_num):
     p = float(k) / (N - 1.)
     for i in range(N):
         for j in range(N):
-            if i != j and random() < p:
-                result += ("%d %d %d %d\n" % (i, j, randint(0, channel_num), randint(0,2)))
+            if i != j and random.random() < p:
+                result += ("%d %d %d %d\n" % (i, j, random.randint(0, channel_num-1), random.choice([-1,1])))
     return result
 
 #from scipy.integrate import ode
@@ -94,8 +94,8 @@ def generate_xor_timeseries(duration, one_signal_duration):
     result = ""
     step_num = int(duration/one_signal_duration)
 
-    in1 = [np.random.randint(0, 2) for i in range(step_num)]
-    in2 = [np.random.randint(0, 2) for i in range(step_num)]
+    in1 = [random.randint(0, 1) for i in range(step_num)]
+    in2 = [random.randint(0, 1) for i in range(step_num)]
 
     for i in range(step_num):
         time = float(i * one_signal_duration)
@@ -116,7 +116,7 @@ def generate_parity_timeseries(duration, one_signal_duration):
     result = ""
     step_num = int(duration/one_signal_duration)
 
-    in1 = [np.random.randint(0, 2) for i in range(step_num)]
+    in1 = [random.randint(0, 1) for i in range(step_num)]
 
     current_parity = True
     for i in range(step_num):
@@ -138,7 +138,7 @@ def generate_delay_timeseries(duration, one_signal_duration):
     result = ""
     step_num = int(duration/one_signal_duration)
 
-    in1 = [np.random.randint(0, 2) for i in range(step_num)]
+    in1 = [random.randint(0, 1) for i in range(step_num)]
 
     current_parity = True
     for i in range(step_num):
@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
     (opts, args) = parser.parse_args()
 
-    np.random.seed(opts.random_seed)
+    random.seed(opts.random_seed)
 
     settings = generate_settings(opts.type,
                                  N=opts.N,

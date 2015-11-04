@@ -19,27 +19,8 @@ class ESPSNExperimentData(object):
         input_num = self.settings["input_num"]
 
         self.time = np.array([s*esn_dt for s in range(int(duration/esn_dt))])
-        #time_cnt = len(self.time)
 
-        # read target signale and input signals from setting file
-        """
-        self.target = np.zeros(time_cnt)
-        self.input_raw = []
-        self.input = [np.zeros(time_cnt) for i in range(input_num)]
-        for d in np.loadtxt(setting_file, skiprows=10):
-            time = float(d[0])
-            time_idx = int(time / esn_dt)
-            input_raw = d[-2]
-            self.input_raw.append((time, input_raw))
-            #self.target[time_idx:] = int(d[-1])
-            self.target[time_idx:] = d[-1]
-            for i in range(input_num):
-                self.input[i][time_idx:] = int(d[i+1])
-        """
-        cwnd_cnt = N * N - N
-
-        cwnd_tmp = np.zeros((cwnd_cnt, len(self.time)))
-
+        cwnd_tmp = np.zeros((N * N - N, len(self.time)))
         cwnd_raw_matrix = [[[] for j in range(N)] for i in range(N)]
         print_time = 0
         for l in open(tcp_cwnd_log_file):
