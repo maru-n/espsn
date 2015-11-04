@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-
+from numpy.random import random, randint
 
 def generate_settings(type, N=10, duration=200,
                       one_signal_duration=4.,
@@ -23,25 +23,40 @@ def generate_settings(type, N=10, duration=200,
     setting_str += ("esn_init_time:%f\n" % esn_init_time)
     setting_str += ("esn_training_time:%f\n" % esn_training_time)
     setting_str += ("esn_dt:%f\n" % esn_dt)
+    if type in ['xor']:
+        channel_num = 2
+    else:
+        channel_num = 1
+    setting_str += "input:%d\n" % channel_num
 
+    # Topology  [src] [dst] [input_channel] [positive/negative]
+    setting_str += "\n"
+    setting_str += generate_topology_setting(N, k, channel_num)
+
+    # Time series  [time] [input0] [input1] ... [target]
+    setting_str += "\n"
     if type == 'xor':
-        setting_str += ("input:2\n\n")
         setting_str += generate_xor_timeseries(duration, one_signal_duration)
     elif type == 'parity':
-        setting_str += "input:1\n\n"
         setting_str += generate_parity_timeseries(duration, one_signal_duration)
     elif type == 'delay':
-        setting_str += "input:1\n\n"
         setting_str += generate_delay_timeseries(duration, one_signal_duration)
     elif type == 'sin':
-        setting_str += "input:1\n\n"
         setting_str += generate_sin_timeseries(duration, one_signal_duration)
     elif type == "mg":
-        setting_str += "input:1\n\n"
         setting_str += generate_mackey_glass_timeseries(duration, one_signal_duration, dt=data_delay)
 
     return setting_str
 
+
+def generate_topology_setting(N, k, channel_num):
+    result = ""
+    p = float(k) / (N - 1.)
+    for i in range(N):
+        for j in range(N):
+            if i != j and random() < p:
+                result += ("%d %d %d %d\n" % (i, j, randint(0, channel_num), randint(0,2)))
+    return result
 
 #from scipy.integrate import ode
 
@@ -164,7 +179,7 @@ if __name__ == '__main__':
                       dest="random_seed",
                       type="int",
                       default=None,
-                      help="random seed")
+                      help="random seed for generate settings")
     parser.add_option("--duration",
                       dest="duration",
                       type="int",
