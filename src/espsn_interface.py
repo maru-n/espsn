@@ -91,4 +91,5 @@ if __name__ == '__main__':
              training_time = data.settings['training_time'],
              esn_dt = data.settings['esn_dt'],
              input_num = data.settings['input_num'],
+             topology = data.topology
              )
