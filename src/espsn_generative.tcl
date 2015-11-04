@@ -43,10 +43,9 @@ set k [lindex [split [gets $input_file] ":"] 1]
 #set duty_low [lindex [split [gets $input_file] ":"] 1]
 #set duty_high [lindex [split [gets $input_file] ":"] 1]
 
-# esn settings on 3 lines, not used on ns-2
-gets $input_file
-gets $input_file
-gets $input_file
+set esn_init_time [lindex [split [gets $input_file] ":"] 1]
+set esn_training_time [lindex [split [gets $input_file] ":"] 1]
+set esn_dt [lindex [split [gets $input_file] ":"] 1]
 set input_ch_num [lindex [split [gets $input_file] ":"] 1]
 gets $input_file
 
@@ -131,6 +130,7 @@ $ns queue-limit $node([expr $N - 1]) $node(0) $queue_limit
 set p [expr $k / ($N -1)]
 
 puts "\033\[32m\[PSN\]\033\[39m creating flows..."
+set flows []
 for {set i 0} {$i < $N} {incr i} {
   for {set j 0} {$j < $N} {incr j} {
     if { $i == $j } {continue}
@@ -151,20 +151,49 @@ for {set i 0} {$i < $N} {incr i} {
       $tcp set fid_ $flow_id
       #$ns color 0 blue
 
-      if { 0.5 < [expr rand()] } {
-        set flow [new Application/InputFlowReverse $input($input_ch)]
-        #puts [format "  flow: node(%d) -> node(%d) +input(%d)" $i $j $input_ch]
-      } else {
-        set flow [new Application/InputFlow $input($input_ch)]
-        #puts [format "  flow: node(%d) -> node(%d) -input(%d)" $i $j $input_ch]
-      }
+      set flow [new Application/FTP]
+      lappend flows $flow
+
+      #if { 0.5 < [expr rand()] } {
+      #  set flow [new Application/InputFlowReverse $input($input_ch)]
+      #  #puts [format "  flow: node(%d) -> node(%d) +input(%d)" $i $j $input_ch]
+      #} else {
+      #  set flow [new Application/InputFlow $input($input_ch)]
+      #  #puts [format "  flow: node(%d) -> node(%d) -input(%d)" $i $j $input_ch]
+      #}
       $flow attach-agent $tcp
     }
   }
 }
 
-puts "\033\[32m\[PSN\]\033\[39m simulation..."
-for {set i 0} {$i <= $duration} {incr i 100} {
-  $ns at $i "puts { time: $i}"
+set python_generative_interface espsn_interface_generative.py
+
+proc update-ns-input {} {
+    global python_generative_interface
+    global flows
+    global ns
+    global esn_dt
+    set now [$ns now]
+    set esnout [ exec python $python_generative_interface ]
+    #puts $now
+    #puts $esnout
+    for {set i 0} {$i < [llength $flows]} {incr i 1} {
+        set flow [lindex $flows $i]
+        $ns at [expr $now] "$flow start"
+        $ns at [expr $now + $esn_dt * $esnout] "$flow stop"
+    }
 }
+
+set cnt [expr $duration / $esn_dt]
+
+for {set i 0} {$i < $cnt} {incr i} {
+    set t [expr $i * $esn_dt]
+    $ns at $t "update-ns-input"
+}
+for {set i 0} {$i <= $duration} {incr i 1} {
+    $ns at $i "puts $i"
+}
+
+
+puts "\033\[32m\[PSN\]\033\[39m simulation..."
 $ns run

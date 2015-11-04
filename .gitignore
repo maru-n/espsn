@@ -13,3 +13,4 @@ scripts/N-T_search/*.npy
 scripts/N-T_search/*.settings.json
 .DS_Store
 testdata/out*
+src/__pycache__
