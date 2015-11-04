@@ -74,16 +74,12 @@ for {set i 0} {$i < $N} {incr i} {
 puts "\033\[32m\[PSN\]\033\[39m creating link topology..."
 set link_params "$link_bps $link_delay DropTail"
 for {set i 0} {$i < $N-1} {incr i} {
-    #------------------
     # 1-d grid
-    #------------------
     eval \$ns duplex-link \$node(\$i) \$node([expr \$i + 1]) $link_params
     $ns queue-limit $node($i) $node([expr $i + 1]) $queue_limit
     $ns queue-limit $node([expr $i + 1]) $node($i) $queue_limit
 
-    #------------------
     # random graph
-    #------------------
     # for {set j [expr $i + 1]} {$j < $N} {incr j} {
     #   if { 0.5 < [expr rand()]} {
     #     #puts [format "  node(%d) <-> node(%d)" $i $j]
