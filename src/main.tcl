@@ -1,5 +1,7 @@
 source "application.tcl"
 
+set PY_GENERATIVE_INTERFACE_SCRIPT "|./esn_interface_generative.py"
+
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
 if {[llength $argv] == 3} {
@@ -72,7 +74,7 @@ $ns at $duration "exit 0"
 #$ns namtrace-all $namfile
 set tcp_output [open $tcp_file_name w]
 if {$is_generative} {
-    set py_generative_interface [open "|./test.py 2>error" "r+"]
+    set py_generative_interface [open $PY_GENERATIVE_INTERFACE_SCRIPT "r+"]
 }
 #Agent/TCP set trace_all_oneline_ true
 

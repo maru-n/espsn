@@ -35,8 +35,8 @@ if [ -n "`readlink $SCRIPT`" ] ; then
     SCRIPT="`readlink $SCRIPT`"
 fi
 SRC_DIR=$(cd $(dirname $SCRIPT) && pwd)/src
-NS2_SCRIPT=espsn.tcl
-ESPSN_SCRIPT=espsn_interface.py
+NS2_SCRIPT=main.tcl
+ESPSN_SCRIPT=esn_interface.py
 SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
 WORKING_DIR=`dirname $SETTING_FILE`
 
