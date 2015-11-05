@@ -48,6 +48,9 @@ set nam_file_name "$output_file_name.nam"
 set tcp_file_name "$output_file_name.tcp"
 set network_file_name "$output_file_name.network"
 
+if {$is_generative} {
+    puts "\033\[31m\[GENERATIVE\]\033\[39m"
+}
 puts "--------------------"
 puts "Setting File: $input_file_name"
 puts "Output File: $output_file_name.\{tr|tcp|tam\}"
@@ -67,7 +70,10 @@ $ns at $duration "exit 0"
 #$ns trace-all $tracefile
 #set namfile [open $nam_file_name w]
 #$ns namtrace-all $namfile
-set tcpfile [open $tcp_file_name w]
+set tcp_output [open $tcp_file_name w]
+if {$is_generative} {
+    set py_generative_interface [open "|./test.py 2>error" "r+"]
+}
 #Agent/TCP set trace_all_oneline_ true
 
 
@@ -112,14 +118,23 @@ foreach flow_setting $topology {
     set tcp [new Agent/TCP/Newreno]
     set sink [new Agent/TCPSink]
     $tcp trace cwnd_
-    $tcp attach-trace $tcpfile
+    if { $is_generative } {
+        $tcp attach-trace $py_generative_interface
+        #$tcp attach-trace $tcp_output
+    } else {
+        $tcp attach-trace $tcp_output
+    }
     $ns attach-agent $node($src) $tcp
     $ns attach-agent $node($dst) $sink
     $ns connect $tcp $sink
     $tcp set fid_ [llength $flows]
 
     if { $is_generative } {
-        set flow [new Application/FTP]
+        if { $pos_neg == 1 } {
+            set flow [new Application/FTP]
+        } else {
+            set flow [new Application/FTP]
+        }
     } else {
         if { $pos_neg == 1 } {
             set flow [new Application/InputFlow $input($input_ch)]
@@ -131,17 +146,26 @@ foreach flow_setting $topology {
     $flow attach-agent $tcp
 }
 
-set python_generative_interface espsn_interface_generative.py
 proc update-ns-input {} {
-    global python_generative_interface
+    global py_generative_interface
     global flows
     global ns
     global esn_dt
     set now [$ns now]
-    set esnout [ exec python $python_generative_interface ]
+
+    #flush $py_generative_interface
+    puts $py_generative_interface "get_activity"
+    flush $py_generative_interface
+    gets $py_generative_interface esnout
+
+    #puts $now
+    #puts $esnout
+    #puts ---
+
+    set esnout 0.5
     for {set i 0} {$i < [llength $flows]} {incr i 1} {
         set flow [lindex $flows $i]
-        $ns at [expr $now] "$flow start"
+        $ns at $now "$flow start"
         $ns at [expr $now + $esn_dt * $esnout] "$flow stop"
     }
 }

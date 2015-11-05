@@ -15,3 +15,5 @@ scripts/N-T_search/*.settings.json
 testdata/out*
 src/__pycache__
 delay_search/setting_mg_delay_*.txt
+notebook/__pycache__
+tmp
