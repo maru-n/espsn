@@ -14,3 +14,4 @@ scripts/N-T_search/*.settings.json
 .DS_Store
 testdata/out*
 src/__pycache__
+delay_search/setting_mg_delay_*.txt

@@ -3,8 +3,8 @@ source "application.tcl"
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
 if {[llength $argv] == 3} {
+    set espsn_experiment_data [lindex $argv 2]
     set is_generative 1
-    set espsn_experiment_data [lindex $argv 1]
 } else {
     set is_generative 0
 }
@@ -100,8 +100,9 @@ eval \$ns duplex-link \$node(0) \$node([expr \$N - 1]) $link_params
 $ns queue-limit $node(0) $node([expr $N - 1]) $queue_limit
 $ns queue-limit $node([expr $N - 1]) $node(0) $queue_limit
 
+
 puts "\033\[32m\[PSN\]\033\[39m creating flows..."
-set flow_id 0
+set flows []
 foreach flow_setting $topology {
     set src [lindex $flow_setting 0]
     set dst [lindex $flow_setting 1]
@@ -115,20 +116,51 @@ foreach flow_setting $topology {
     $ns attach-agent $node($src) $tcp
     $ns attach-agent $node($dst) $sink
     $ns connect $tcp $sink
-    $tcp set fid_ $flow_id
-    set flow_id [expr $flow_id + 1]
+    $tcp set fid_ [llength $flows]
 
-    if { $pos_neg == 1 } {
-        set flow [new Application/InputFlow $input($input_ch)]
+    if { $is_generative } {
+        set flow [new Application/FTP]
     } else {
-        set flow [new Application/InputFlowReverse $input($input_ch)]
+        if { $pos_neg == 1 } {
+            set flow [new Application/InputFlow $input($input_ch)]
+        } else {
+            set flow [new Application/InputFlowReverse $input($input_ch)]
+        }
     }
+    lappend flows $flow
     $flow attach-agent $tcp
 }
 
+set python_generative_interface espsn_interface_generative.py
+proc update-ns-input {} {
+    global python_generative_interface
+    global flows
+    global ns
+    global esn_dt
+    set now [$ns now]
+    set esnout [ exec python $python_generative_interface ]
+    for {set i 0} {$i < [llength $flows]} {incr i 1} {
+        set flow [lindex $flows $i]
+        $ns at [expr $now] "$flow start"
+        $ns at [expr $now + $esn_dt * $esnout] "$flow stop"
+    }
+}
+
+if { $is_generative } {
+    for {set i 0} {$i < [expr $duration / $esn_dt]} {incr i} {
+        set t [expr $i * $esn_dt]
+        $ns at $t "update-ns-input"
+    }
+    for {set i 0} {$i <= $duration} {incr i 1} {
+        $ns at $i "puts { time: $i}"
+    }
+} else {
+    for {set i 0} {$i <= $duration} {incr i 100} {
+        $ns at $i "puts { time: $i}"
+    }
+}
+
+
 
 puts "\033\[32m\[PSN\]\033\[39m simulation..."
-for {set i 0} {$i <= $duration} {incr i 100} {
-  $ns at $i "puts { time: $i}"
-}
 $ns run
