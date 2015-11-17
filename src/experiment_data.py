@@ -4,7 +4,7 @@
 import numpy as np
 from os.path import join, splitext
 from scipy.signal import argrelmax
-import espsn_util
+import util
 
 
 class ESPSNExperimentData(object):
@@ -31,7 +31,7 @@ class ESPSNExperimentData(object):
             cwnd = float(d[6])
             cwnd_raw_matrix[src][dst].append((time, cwnd))
             if print_time < time:
-                espsn_util.print_status("time: %f" % print_time, header="")
+                util.print_status("time: %f" % print_time, header="")
                 print_time += 200
         self.cwnd = []
         self.cwnd_raw = []
