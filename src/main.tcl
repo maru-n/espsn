@@ -1,11 +1,11 @@
 source "application.tcl"
 
-set PY_GENERATIVE_INTERFACE_SCRIPT "|./esn_interface_generative.py"
+set PY_GENERATIVE_INTERFACE_SCRIPT "|./esn_interface_generative.py 2>error.log"
 
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
 if {[llength $argv] == 3} {
-    set espsn_experiment_data [lindex $argv 2]
+    set training_data [lindex $argv 2]
     set is_generative 1
 } else {
     set is_generative 0
@@ -72,9 +72,12 @@ $ns at $duration "exit 0"
 #$ns trace-all $tracefile
 #set namfile [open $nam_file_name w]
 #$ns namtrace-all $namfile
-set tcp_output [open $tcp_file_name w]
+
 if {$is_generative} {
     set py_generative_interface [open $PY_GENERATIVE_INTERFACE_SCRIPT "r+"]
+    puts $py_generative_interface $training_data
+} else {
+    set tcp_output [open $tcp_file_name w]
 }
 #Agent/TCP set trace_all_oneline_ true
 
@@ -122,7 +125,6 @@ foreach flow_setting $topology {
     $tcp trace cwnd_
     if { $is_generative } {
         $tcp attach-trace $py_generative_interface
-        #$tcp attach-trace $tcp_output
     } else {
         $tcp attach-trace $tcp_output
     }
@@ -133,9 +135,9 @@ foreach flow_setting $topology {
 
     if { $is_generative } {
         if { $pos_neg == 1 } {
-            set flow [new Application/FTP]
+            set flow [new Application/InputRealtimeFlow]
         } else {
-            set flow [new Application/FTP]
+            set flow [new Application/InputRealtimeFlowReverse]
         }
     } else {
         if { $pos_neg == 1 } {
@@ -160,15 +162,10 @@ proc update-ns-input {} {
     flush $py_generative_interface
     gets $py_generative_interface esnout
 
-    #puts $now
-    #puts $esnout
-    #puts ---
-
-    set esnout 0.5
     for {set i 0} {$i < [llength $flows]} {incr i 1} {
         set flow [lindex $flows $i]
-        $ns at $now "$flow start"
-        $ns at [expr $now + $esn_dt * $esnout] "$flow stop"
+        $ns at $now "$flow input_on"
+        $ns at [expr $now + $esn_dt * $esnout] "$flow input_off"
     }
 }
 
