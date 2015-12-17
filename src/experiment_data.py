@@ -45,7 +45,7 @@ class ESPSNExperimentData(object):
                 peak_idx = argrelmax(c[:, 1])
                 time = c[peak_idx, 0][0,:]
                 cwnd = c[peak_idx, 1][0,:]
-                self.cwnd.append( np.interp(self.time, time, cwnd))
+                self.cwnd.append(np.interp(self.time, time, cwnd))
                 self.cwnd_raw.append(c)
                 self.cwnd_src_dst.append((i,j))
         self.cwnd = np.array(self.cwnd)

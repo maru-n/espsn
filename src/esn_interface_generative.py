@@ -8,9 +8,10 @@ from experiment_data import ESPSNExperimentData
 training_data_filename = sys.stdin.readline().strip()
 training_data = np.load(training_data_filename)
 
-tcp_filename = "tmp.tcp"
+tcp_filename = sys.stdin.readline().strip()
 tcp_file = open(tcp_filename, "w")
-activity_filename = "activity"
+
+activity_filename = sys.stdin.readline().strip()
 activity_file = open(activity_filename, "w")
 
 #setting_filename = "../setting.txt"
@@ -24,20 +25,33 @@ cwnd_src_dst = training_data['cwnd_src_dst']
 current_cwnd = np.zeros(cwnd_src_dst.shape[0])
 output = []
 
+correct_data = np.loadtxt("../MackeyGlass_t17.txt")
+data_idx = 0
+init_idx = 0
+
 output_time = 0.0
 time = 0.0
 while True:
     line = sys.stdin.readline()
+    tcp_file.write(line)
     if(line == "get_activity\n"):
         x = np.dot(current_cwnd, weight)/40.0
-        print(x)
+        correct_x = correct_data[data_idx] + 0.6
+        data_idx += 1
+
+        if(init_idx < 10):
+            print(0.1)
+            init_idx += 1
+        else:
+            #print(x)
+            print(0.1)
+        #print(correct_x)
         sys.stdout.flush()
         output.append(x)
         activity_file.write(str(x)+'\n')
     elif(line == "clean\n"):
         break
     else:
-        tcp_file.write(line)
         vals = line.split()
         time = float(vals[0])
         src = int(vals[1])

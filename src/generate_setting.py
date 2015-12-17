@@ -2,6 +2,8 @@
 
 import numpy as np
 import random
+import os
+
 
 def generate_settings(type, N=10, duration=200,
                       one_signal_duration=4.,
@@ -49,6 +51,9 @@ def generate_settings(type, N=10, duration=200,
     return setting_str
 
 
+MACKEY_GLASS_FILE = os.path.join(os.path.dirname(__file__), 'MackeyGlass_t17.txt')
+
+
 def generate_topology_setting(N, k, channel_num):
     result = ""
     p = float(k) / (N - 1.)
@@ -63,7 +68,7 @@ def generate_topology_setting(N, k, channel_num):
 def generate_mackey_glass_timeseries(duration, one_signal_duration, dt=0):
     result = ""
     step_num = int(duration/one_signal_duration)
-    x = np.loadtxt("MackeyGlass_t17.txt")
+    x = np.loadtxt(MACKEY_GLASS_FILE)
     for i in range(step_num):
         time = float(i * one_signal_duration)
         input_val = x[i] + 0.6

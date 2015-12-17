@@ -4,9 +4,11 @@ set PY_GENERATIVE_INTERFACE_SCRIPT "|./esn_interface_generative.py 2>error.log"
 
 set input_file_name [lindex $argv 0]
 set output_file_name [lindex $argv 1]
-if {[llength $argv] == 3} {
+if {[llength $argv] == 4} {
     set training_data [lindex $argv 2]
     set is_generative 1
+    set duration_generative [lindex $argv 3]
+    puts $duration_generative
 } else {
     set is_generative 0
 }
@@ -14,7 +16,7 @@ if {[llength $argv] == 3} {
 set input_file [open $input_file_name]
 
 set N [lindex [split [gets $input_file] ":"] 1]
-set duration [lindex [split [gets $input_file] ":"] 1]
+set duration_predictive [lindex [split [gets $input_file] ":"] 1]
 set link_bps [lindex [split [gets $input_file] ":"] 1]
 set link_delay [lindex [split [gets $input_file] ":"] 1]
 set queue_limit [lindex [split [gets $input_file] ":"] 1]
@@ -23,6 +25,7 @@ set k [lindex [split [gets $input_file] ":"] 1]
 set esn_init_time [lindex [split [gets $input_file] ":"] 1]
 set esn_training_time [lindex [split [gets $input_file] ":"] 1]
 set esn_dt [lindex [split [gets $input_file] ":"] 1]
+set esn_dt 4
 set input_ch_num [lindex [split [gets $input_file] ":"] 1]
 gets $input_file
 
@@ -51,23 +54,35 @@ set tcp_file_name "$output_file_name.tcp"
 set network_file_name "$output_file_name.network"
 
 if {$is_generative} {
+    puts "--------------------"
     puts "\033\[31m\[GENERATIVE\]\033\[39m"
+    puts "Setting File: $input_file_name"
+    puts "Output File: $output_file_name.\{tr|tcp|tam\}"
+    puts "N: $N"
+    puts "Duration: $duration_generative"
+    puts "Input Channel Num: $input_ch_num"
+    puts "Link: $link_bps, $link_delay, $queue_limit packets queue"
+    puts "k: $k"
+    puts "--------------------"
+} else {
+    puts "--------------------"
+    puts "Setting File: $input_file_name"
+    puts "Output File: $output_file_name.\{tr|tcp|tam\}"
+    puts "N: $N"
+    puts "Duration: $duration_predictive"
+    puts "Input Channel Num: $input_ch_num"
+    puts "Link: $link_bps, $link_delay, $queue_limit packets queue"
+    puts "k: $k"
+    puts "--------------------"
 }
-puts "--------------------"
-puts "Setting File: $input_file_name"
-puts "Output File: $output_file_name.\{tr|tcp|tam\}"
-puts "N: $N"
-puts "Duration: $duration"
-puts "Input Channel Num: $input_ch_num"
-puts "Link: $link_bps, $link_delay, $queue_limit packets queue"
-puts "k: $k"
-puts "--------------------"
-
 
 puts "\033\[32m\[PSN\]\033\[39m initializing simulator..."
 set ns [new Simulator]
-$ns at $duration "exit 0"
-
+if {$is_generative} {
+    $ns at $duration_generative "exit 0"
+} else {
+    $ns at $duration_predictive "exit 0"
+}
 #set tracefile [open $trace_file_name w]
 #$ns trace-all $tracefile
 #set namfile [open $nam_file_name w]
@@ -76,6 +91,9 @@ $ns at $duration "exit 0"
 if {$is_generative} {
     set py_generative_interface [open $PY_GENERATIVE_INTERFACE_SCRIPT "r+"]
     puts $py_generative_interface $training_data
+    puts $py_generative_interface $tcp_file_name
+    set generative_file_name "$output_file_name.gen.txt"
+    puts $py_generative_interface $generative_file_name
 } else {
     set tcp_output [open $tcp_file_name w]
 }
@@ -170,19 +188,18 @@ proc update-ns-input {} {
 }
 
 if { $is_generative } {
-    for {set i 0} {$i < [expr $duration / $esn_dt]} {incr i} {
+    for {set i 0} {$i < [expr $duration_generative / $esn_dt]} {incr i} {
         set t [expr $i * $esn_dt]
         $ns at $t "update-ns-input"
     }
-    for {set i 0} {$i <= $duration} {incr i 1} {
+    for {set i 0} {$i <= $duration_generative} {incr i 1} {
         $ns at $i "puts { time: $i}"
     }
 } else {
-    for {set i 0} {$i <= $duration} {incr i 100} {
+    for {set i 0} {$i <= $duration_predictive} {incr i 100} {
         $ns at $i "puts { time: $i}"
     }
 }
-
 
 
 puts "\033\[32m\[PSN\]\033\[39m simulation..."

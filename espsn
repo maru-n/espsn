@@ -3,14 +3,16 @@
 usage_exit() {
         echo "Usage: $0 [-p] [-e] [-h] [-o ] [-g ] setting.txt" 1>&2
         echo "    -o OUTPUT_FILENAME" 1>&2
-        echo "    -g GENERATIVE_EXPERIMENT_DATA" 1>&2
+        echo "    -g GENERATIVE_TRAINING_DATA" 1>&2
+        echo "    -d GENERATIVE_DURATION" 1>&2
         echo "    -p    only PSN" 1>&2
         echo "    -e    only ESN" 1>&2
         exit 1
 }
 
 OUTPUT_FILENAME=out
-while getopts peo:g:h OPT
+GENERATIVE_DURATION=1000
+while getopts peo:g:d:h OPT
 do
     case $OPT in
         p) ONLY_PSN_FLAG=true
@@ -19,8 +21,10 @@ do
             ;;
         o)  OUTPUT_FILENAME=$OPTARG
             ;;
-        g)  GENERATIVE_EXPERIMENT_DATA=$OPTARG
+        g)  GENERATIVE_TRAINING_DATA=$OPTARG
             GENERATIVE=true
+            ;;
+        d)  GENERATIVE_DURATION=$OPTARG
             ;;
         h)  usage_exit
             ;;
@@ -39,19 +43,22 @@ NS2_SCRIPT=main.tcl
 ESPSN_SCRIPT=esn_interface.py
 SETTING_FILE=$(cd $(dirname $1) && pwd)/$(basename $1)
 WORKING_DIR=`dirname $SETTING_FILE`
+OUTPUT_FILENAME=${WORKING_DIR}/${OUTPUT_FILENAME}
+GENERATIVE_TRAINING_DATA=${WORKING_DIR}/${GENERATIVE_TRAINING_DATA}
 
 cd $SRC_DIR
 if [ $GENERATIVE ] ; then
-    NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME} ${WORKING_DIR}/${GENERATIVE_EXPERIMENT_DATA}"
+    NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_FILENAME} ${GENERATIVE_TRAINING_DATA} ${GENERATIVE_DURATION}"
+    echo $NS2_CMD
     eval $NS2_CMD
 else
     if [ ! $ONLY_ESN_FLAG ] ; then
-        NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}"
+        NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_FILENAME}"
         eval $NS2_CMD
     fi
 
     if [ ! $ONLY_PSN_FLAT ] ; then
-        ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${WORKING_DIR}/${OUTPUT_FILENAME}.tcp ${WORKING_DIR}/${OUTPUT_FILENAME}"
+        ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_FILENAME}.tcp ${OUTPUT_FILENAME}"
         eval $ESPSN_CMD
     fi
 fi
