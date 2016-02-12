@@ -49,7 +49,6 @@ GENERATIVE_TRAINING_DATA=${WORKING_DIR}/${GENERATIVE_TRAINING_DATA}
 cd $SRC_DIR
 if [ $GENERATIVE ] ; then
     NS2_CMD="ns ${NS2_SCRIPT} ${SETTING_FILE} ${OUTPUT_FILENAME} ${GENERATIVE_TRAINING_DATA} ${GENERATIVE_DURATION}"
-    echo $NS2_CMD
     eval $NS2_CMD
 else
     if [ ! $ONLY_ESN_FLAG ] ; then
@@ -57,7 +56,7 @@ else
         eval $NS2_CMD
     fi
 
-    if [ ! $ONLY_PSN_FLAT ] ; then
+    if [ ! $ONLY_PSN_FLAG ] ; then
         ESPSN_CMD="python ${ESPSN_SCRIPT} ${SETTING_FILE} ${OUTPUT_FILENAME}.tcp ${OUTPUT_FILENAME}"
         eval $ESPSN_CMD
     fi

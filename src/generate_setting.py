@@ -3,15 +3,17 @@
 import numpy as np
 import random
 import os
+import util
 
 
-def generate_settings(type, N=10, duration=200,
+def generate_settings(input_type, N=10, duration=200,
                       one_signal_duration=4.,
                       k=6.,
                       esn_init_time=4,
                       esn_training_time=100,
                       esn_dt=0.1,
-                      data_delay=0):
+                      continuous_target_delay=0,
+                      continuous_time_series_file=None):
     setting_str = ""
 
     setting_str += ("N:%d\n" % N)
@@ -22,36 +24,42 @@ def generate_settings(type, N=10, duration=200,
     #setting_str += ("link_queue:10\n")
     setting_str += ("link_queue:3\n")
     setting_str += ("k:%f\n" % k)
-    setting_str += ("esn_init_time:%f\n" % esn_init_time)
-    setting_str += ("esn_training_time:%f\n" % esn_training_time)
+    setting_str += ("esn_init_time:%d\n" % esn_init_time)
+    setting_str += ("esn_training_time:%d\n" % esn_training_time)
     setting_str += ("esn_dt:%f\n" % esn_dt)
-    if type in ['xor']:
-        channel_num = 2
-    else:
-        channel_num = 1
-    setting_str += "input:%d\n" % channel_num
+    setting_str += "input_num:2\n"  if input_type in ['xor'] else "input_num:1\n"
+    setting_str += "continuous:1\n" if input_type in ['continuous', 'continuous-noise'] else "continuous:0\n"
+    setting_str += "\n"
 
     # Topology  [src] [dst] [input_channel] [positive(1)/negative(-1)]
-    setting_str += "\n"
-    setting_str += generate_topology_setting(N, k, channel_num)
+    if input_type in ['xor']:
+        setting_str += generate_topology_setting(N, k, 2)
+    else:
+        setting_str += generate_topology_setting(N, k, 1)
 
     # Time series  [time] [input0] [input1] ... [target]
     setting_str += "\n"
-    if type == 'xor':
+    if input_type == 'xor':
         setting_str += generate_xor_timeseries(duration, one_signal_duration)
-    elif type == 'parity':
+    elif input_type == 'parity':
         setting_str += generate_parity_timeseries(duration, one_signal_duration)
-    elif type == 'delay':
+    elif input_type == 'delay':
         setting_str += generate_delay_timeseries(duration, one_signal_duration)
-    elif type == 'sin':
+    elif input_type == 'sin':
         setting_str += generate_sin_timeseries(duration, one_signal_duration)
-    elif type == "mg":
-        setting_str += generate_mackey_glass_timeseries(duration, one_signal_duration, dt=data_delay)
-
+    elif input_type == "continuous":
+        setting_str += generate_continuous_timeseries(continuous_time_series_file,
+                                                      duration,
+                                                      one_signal_duration,
+                                                      continuous_target_delay,
+                                                      noise=False)
+    elif type == "continuous-noise":
+        setting_str += generate_continuous_timeseries(continuous_time_series_file,
+                                                      duration,
+                                                      one_signal_duration,
+                                                      continuous_target_delay,
+                                                      noise=True)
     return setting_str
-
-
-MACKEY_GLASS_FILE = os.path.join(os.path.dirname(__file__), 'MackeyGlass_t17.txt')
 
 
 def generate_topology_setting(N, k, channel_num):
@@ -63,19 +71,22 @@ def generate_topology_setting(N, k, channel_num):
                 result += ("%d %d %d %d\n" % (i, j, random.randint(0, channel_num-1), random.choice([-1,1])))
     return result
 
-#from scipy.integrate import ode
 
-def generate_mackey_glass_timeseries(duration, one_signal_duration, dt=0):
+def generate_continuous_timeseries(filename, duration, one_signal_duration, target_delay, noise=False):
+    noise_standard_deviation = 0.01
     result = ""
     step_num = int(duration/one_signal_duration)
-    x = np.loadtxt(MACKEY_GLASS_FILE)
+    x = np.loadtxt(filename)
     for i in range(step_num):
         time = float(i * one_signal_duration)
-        input_val = x[i] + 0.6
-        target_val = x[i+dt] + 0.6
-        signal_dt = one_signal_duration * input_val
-        result += ("%f 1 %f %f\n" % (time, input_val, target_val))
-        result += ("%f 0 %f %f\n" % (time+signal_dt, input_val, target_val))
+        input_val = x[i]
+        target_val = x[i+target_delay]
+        if noise:
+            input_val += np.random.normal(scale=noise_standard_deviation)
+        signal_dt = one_signal_duration * util.continuous_pwm_func(input_val)
+
+        result += ("%f %d %f %f\n" % (time,           1, input_val, target_val))
+        result += ("%f %d\n"       % (time+signal_dt, 0))
     return result
 
 
@@ -160,16 +171,26 @@ if __name__ == '__main__':
     parser.add_option("-o",
                       dest="output_filename",
                       type="string",
-                      default="setting.txt",
+                      default=None,
                       help="write output to FILE",
                       metavar="FILE")
     parser.add_option("-t",
-                      "--type",
-                      dest="type",
-                      choices=["xor", "parity", "delay", "sin", "mg"],
+                      "--input-type",
+                      dest="input_type",
+                      choices=["xor", "parity", "delay", "sin", "continuous", "continuous-noise"],
                       type="choice",
                       default="xor",
-                      help="time series type [xor|parity|delay|sin|mg]")
+                      help="time series type [xor|parity|delay|sin|continuous|continuous-noise]")
+    parser.add_option("--time-series-file",
+                      dest="time_series_file",
+                      type="string",
+                      default=None,
+                      help="file of continuous time series (ignored when type is not continuous|continuous-noise)")
+    parser.add_option("--target-delay",
+                      dest="target_delay",
+                      type="int",
+                      default=1,
+                      help="delay of target signal = predictive time step (ignored when type is not continuous|continuous-noise)")
     parser.add_option("-N",
                       dest="N",
                       type="int",
@@ -188,7 +209,7 @@ if __name__ == '__main__':
     parser.add_option("--duration",
                       dest="duration",
                       type="int",
-                      default=500,
+                      default=2100,
                       help="experimental duration")
     parser.add_option("--init-time",
                       dest="init_time",
@@ -198,35 +219,36 @@ if __name__ == '__main__':
     parser.add_option("--training-time",
                       dest="training_time",
                       type="int",
-                      default=300,
+                      default=1100,
                       help="end time of training (< duration)")
+    parser.add_option("--esn-dt",
+                      dest="esn_dt",
+                      type="float",
+                      default=4.0,
+                      help="duration of a 0/1 signal")
     parser.add_option("--one-signal-duration",
                       dest="one_signal_duration",
                       type="float",
                       default=4.0,
                       help="duration of a 0/1 signal")
-    parser.add_option("--data-delay",
-                      dest="data_delay",
-                      type="int",
-                      default=0,
-                      help="data delay (continuous value only)")
 
     (opts, args) = parser.parse_args()
 
     random.seed(opts.random_seed)
 
-    settings = generate_settings(opts.type,
+    settings = generate_settings(opts.input_type,
                                  N=opts.N,
                                  duration=opts.duration,
                                  one_signal_duration=opts.one_signal_duration,
                                  k=opts.k,
                                  esn_init_time=opts.init_time,
                                  esn_training_time=opts.training_time,
-                                 esn_dt=0.1,
-                                 data_delay=opts.data_delay)
+                                 esn_dt=opts.esn_dt,
+                                 continuous_target_delay=opts.target_delay,
+                                 continuous_time_series_file=opts.time_series_file)
 
-    if opts.output_filename:
+    if opts.output_filename is None:
+        print(settings)
+    else:
         output = open(opts.output_filename, 'w')
         output.write(settings)
-    else:
-        print(settings)

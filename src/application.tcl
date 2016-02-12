@@ -75,7 +75,7 @@ Application/InputFlow instproc init {args} {
   global ns
   $self instvar process_list
   set process_list [lindex $args 0]
-  $ns at 0.0 "$self start"
+  #$ns at 0.0 "$self start"
   foreach process $process_list {
     set time [lindex $process 0]
     set state_id [lindex $process 1]
@@ -93,12 +93,11 @@ Application/InputFlow instproc init {args} {
 # InputFlowReverse
 #====================
 Class Application/InputFlowReverse -superclass Application/FTP
-
 Application/InputFlowReverse instproc init {args} {
   global ns
   $self instvar process_list
   set process_list [lindex $args 0]
-  $ns at 0.0 "$self start"
+  #$ns at 0.0 "$self start"
   foreach process $process_list {
     set time [lindex $process 0]
     set state_id [lindex $process 1]
@@ -136,12 +135,10 @@ Application/InputRealtimeFlowReverse instproc input_off {} {
 }
 
 
-
 #====================
 # PeriodicFTP
 #====================
 Class Application/PeriodicFTP -superclass Application/FTP
-
 Application/PeriodicFTP instproc init {args} {
   $self instvar cycle duty state
   set cycle [lindex $args 0]
