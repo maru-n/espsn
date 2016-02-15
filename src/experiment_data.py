@@ -49,12 +49,12 @@ class ESPSNExperimentData(object):
         esn_dt = self.settings["esn_dt"]
         duration = self.settings["duration"]
         self.esn_time_index = np.arange(0, duration, esn_dt)
-        self.esn_cwnd_index = []
+        #self.esn_cwnd_index = []
         self.esn_cwnd = np.zeros((len(self.esn_time_index), len(self.settings["topology"])))
         i = 0
         for src in self.cwnd:
             for dst in self.cwnd[src]:
-                self.esn_cwnd_index.append((src,dst))
+                #self.esn_cwnd_index.append((src,dst))
                 for time, cwnd in self.cwnd[src][dst]:
                     time_idx = int(time/esn_dt)
                     self.esn_cwnd[time_idx:,i] = cwnd

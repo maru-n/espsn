@@ -8,8 +8,8 @@ def sigmoid(x, a=1):
 
 
 def continuous_pwm_func(x):
-    return max(0., x*0.5 + 0.5)
-    #return sigmoid(x)
+    #return max(0., x*0.5 + 0.5)
+    return sigmoid(x)
 
 
 def print_status(msg, end="\n", header="[ESN]"):

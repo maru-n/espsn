@@ -15,7 +15,13 @@ def train_weight(output_data, instruction_data, reg_coef=1e-8):
     alpha = reg_coef
     #import ipdb; ipdb.set_trace()
 
-    Wout = dot(inv(dot(X.T, X) + alpha * eye(X.shape[1])), dot(X.T, Y))
+    try:
+        Wout = dot(inv(dot(X.T, X) + alpha * eye(X.shape[1])), dot(X.T, Y))
+    except Exception as e:
+    #except LinAlgError as e:
+        util.print_status("!!! Singular matrix !!!")
+        Wout = np.ones(X.shape[1])
+
     #Wout = dot(dot(Yt, X.T), inv(dot(X, X.T) + reg_coef * eye(X.shape[0])))
     #Wout = dot( dot(Yt,X.T), linalg.inv( dot(X,X.T)))
     return Wout
@@ -70,14 +76,14 @@ if __name__ == '__main__':
     data = ESPSNExperimentData(sys.argv[1], sys.argv[2])
 
     util.print_status("training wegihts...")
-    reg_coefs = np.arange(0.0, 10.0, 1.0)
+    reg_coefs = np.arange(1.0, 10.0, 1.0)
 
     best_mse, best_weight, best_output, best_regcoef, search_result_mse = train_weight_and_reg_coef_search(data, reg_coefs)
 
     util.print_status("saving result...")
     np.savez(output_filename,
              esn_time_index    = data.esn_time_index,
-             esn_cwnd_index    = data.esn_cwnd_index,
+             #esn_cwnd_index    = data.esn_cwnd_index,
              esn_cwnd          = data.esn_cwnd,
              esn_target        = data.esn_target,
              cwnd              = data.cwnd,
